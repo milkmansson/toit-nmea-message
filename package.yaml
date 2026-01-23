@@ -1,0 +1,4 @@
+name: nmea-message
+description: Support for NMEA 0183 messages used by GNSS receivers.
+environment:
+  sdk: ^2.0.0-alpha.188
