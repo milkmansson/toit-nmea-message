@@ -35,12 +35,20 @@ low-cost sensors).
 
 ## Usage
 > [!TIP]
-> The main issues that arise with cheap GNSS devices is having all message types
-> for all satellite types enabled, with the often used default of 9600 bps
-> Serial connection.  This can be too heavy a load for the default 9600 bps
-> baudrate, so often, configuration is requied.
+> An issue that often arises with cheap GNSS devices is having all message types
+> enabled, for all satellite types, combined with the often used default of 9600
+> bps Serial connection.  This can be too heavy a load for the low baudrate.
+> In these cases, configuration is requied to either reduce the message load,
+> or, increase the baudrate.
 
-### Message support
+### Multipart messages
+Via inheritance, all messages have the function `is-multipart`.  This is false
+by default, but will be true for messages that have multiple parts.  If
+`is-multipart` is true, the function `message-part` will return a two member
+list: `message-part[0]` returns the message number, and `message-part[1]` will
+return the number of expected messages.
+
+### Proprietary message support
 This NMEA parser is designed to have any/all possible NMEA sentences (message
 types) added.  The standard provides the facility for proprietary message types
 to be added.  These can be identified by the initial character `P`, such as this
@@ -48,14 +56,16 @@ CASIC message for increasing baud rate to 115200 bps:
 ```Toit
 $PCAS01,5*19
 ```
-The NMEA standard supports proprietary messages.  In this case, support for these is provided by additional parser libraries.  The driver for the device is expected to identify the message and pass it to the correct parser:
+The NMEA standard supports proprietary messages.  In this case, support for
+is provided by additional parser libraries.  The driver for the device is
+expected to identify the message and pass it to the correct parser:
 - `$P` prefix, and `CAS` identifies the CASIC parser.
 - In this case the message type is `01` and the data `5`.
 - The `*19` is the checksum (an XOR of the characters before the `*`)
 
 Using this method, a device supporting say, UBX and NMEA messages, could have
-these libraries implemented, and a ATGM336H driver could have the NMEA and CASIC
-parsers implemented.
+just the `ubx-message` and `nmea-message` libraries implemented, and a ATGM336H
+driver can have the `nmea-message` and `casic-message` parsers implemented.
 
 ## Caveats
 Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based device.

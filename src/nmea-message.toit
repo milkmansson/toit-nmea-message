@@ -165,10 +165,10 @@ class Nmea-message:
     return "NMEA-$talker-$id"
 
   /** Is this message multipart? */
-  multipart -> bool:
+  is-multipart -> bool:
     return false
 
-  part-message -> List:
+  message-part -> List:
     return [1, 1]
 
   /** See $super. */
@@ -501,14 +501,14 @@ class Gsv extends Nmea-message:
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
-  multipart -> bool:
+  is-multipart -> bool:
     return true
 
-  part-message -> List:
+  message-part -> List:
     return [int.parse payload[2], int.parse payload[1]]
 
   system-id -> int:
     return int.parse payload[18]
 
   stringify -> string:
-    return  "$super: $SYSTEM-LOOKUP[system-id]:$part-message "
+    return  "$super: $SYSTEM-LOOKUP[system-id]:$message-part "
