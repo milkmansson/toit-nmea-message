@@ -53,7 +53,7 @@ accomodate the NMEA baseline, for any/all possible NMEA sentences.  (Message
 types) added.  Proprietary messages can be identified by the talker `P`,
 followed by some vendor specific characters, terminated by the first comma.
 
-> [!INFO]
+> [!IMPORTANT]
 > In order to not have one sprawling parser supporting many devices when a
 > project would usually only have one GNSS device physically attached,
 > proprietary parser libraries are provided separately and whilst some of the
