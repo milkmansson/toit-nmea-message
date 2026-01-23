@@ -181,17 +181,19 @@ class Cas02 extends Casic-message:
   static ID ::= Casic-message.CAS02
   talker/string := "P"
 
-  static OUTPUT-1HZ ::= 1000 // Update rate 1Hz, Output per second 1
-  static OUTPUT-2HZ ::= 500  // Update rate 2Hz, Output per second 2
-  static OUTPUT-4HZ ::= 250  // Update rate 4Hz, Output per second 4
-  static OUTPUT-5HZ ::= 200  // Update rate 5Hz, Output per second 5
-  static OUTPUT-10HZ ::= 100 // Update rate 10Hz, Output per second 10
+  static OUTPUT-02HZ ::= 5000 // Update rate 0.2Hz, 1 message per 5 seconds.
+  static OUTPUT-1HZ ::= 1000 // Update rate 1Hz, Output per second 1.
+  static OUTPUT-2HZ ::= 500  // Update rate 2Hz, Output per second 2.
+  static OUTPUT-4HZ ::= 250  // Update rate 4Hz, Output per second 4.
+  static OUTPUT-5HZ ::= 200  // Update rate 5Hz, Output per second 5.
+  static OUTPUT-10HZ ::= 100 // Update rate 10Hz, Output per second 10.
   static OUTPUT-RATE-LOOKUP_ ::= {
-    OUTPUT-1HZ: 1,
-    OUTPUT-2HZ: 2,
-    OUTPUT-4HZ: 4,
-    OUTPUT-5HZ: 5,
-    OUTPUT-10HZ: 10}
+    OUTPUT-02HZ: 0.2,
+    OUTPUT-1HZ: 1.0,
+    OUTPUT-2HZ: 2.0,
+    OUTPUT-4HZ: 4.0,
+    OUTPUT-5HZ: 5.0,
+    OUTPUT-10HZ: 10.0}
 
   constructor rate/int:
     assert: OUTPUT-RATE-LOOKUP_.contains rate
@@ -316,7 +318,7 @@ class Cas04 extends Casic-message:
     TYPE-LOOKUP_.keys.do:
       if (payload[1] & it) != 0:
         out-list.add TYPE-LOOKUP_[it]
-    return  "$super: enabled:$(out.join ",")"
+    return  "$super: enabled:$(out-list.join ",")"
 
 
 /**

@@ -22,16 +22,15 @@ on 5 Jan 2024.
 > implemented.
 
 ## What is NMEA 2000?  Why not use this instead?
-For comparison, NMEA 2000 is a modern marine networking standard (also defined
-by the NMEA) that uses a CAN-bus–based, binary message protocol to exchange
-navigation and sensor data between devices on a shared network.  Unlike NMEA
-0183, which is a text-based, point-to-point serial format, NMEA 2000 is
-packetized, multi-drop, higher bandwidth, and designed for robust system
-integration.  Conceptually it carries same information as NMEA 0183, but in a
-structured binary form rather than pseudo-human-readable sentences.  It has
-largely replaced NMEA 0183 for onboard marine networking, while NMEA 0183
-remains common at the edges of systems (simple GPS modules, legacy devices,
-low-cost sensors).
+For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
+that uses a CAN-bus–based, binary message protocol to exchange navigation/sensor
+data between devices on a shared network.  Unlike NMEA 0183, which is a
+text-based, point-to-point serial format, NMEA 2000 is packetized, multi-drop,
+higher bandwidth, and designed for robust system integration.  Conceptually it
+carries same information as NMEA 0183, but in a structured binary form rather
+than pseudo-human-readable sentences.  It has largely replaced NMEA 0183 for
+onboard marine networking, while NMEA 0183 remains common at the edges of
+systems (simple GPS modules, legacy devices, low-cost sensors).
 
 ## Usage
 > [!TIP]
@@ -48,25 +47,47 @@ by default, but will be true for messages that have multiple parts.  If
 list: `message-part[0]` returns the message number, and `message-part[1]` will
 return the number of expected messages.
 
-### Proprietary message support
-This NMEA parser is designed to have any/all possible NMEA sentences (message
-types) added.  The standard provides the facility for proprietary message types
-to be added.  These can be identified by the initial character `P`, such as this
-CASIC message for increasing baud rate to 115200 bps:
+### Proprietary messages in NMEA
+The NMEA standard supports proprietary messages. This NMEA parser is designed to
+accomodate the NMEA baseline, for any/all possible NMEA sentences.  (Message
+types) added.  Proprietary messages can be identified by the talker `P`,
+followed by some vendor specific characters, terminated by the first comma.
+
+> [!INFORMATION]
+> In order to not have one sprawling parser supporting many devices when a
+> project would usually only have one GNSS device physically attached,
+> proprietary parser libraries are provided separately and whilst some of the
+> code may be similar between them, to ensure they are as small as possible,
+> they are designed not to be dependent on eachother.
+
+Example: A CASIC message for increasing baud rate to 115200 bps looks like this:
 ```Toit
 $PCAS01,5*19
 ```
-The NMEA standard supports proprietary messages.  In this case, support for
-is provided by additional parser libraries.  The driver for the device is
-expected to identify the message and pass it to the correct parser:
-- `$P` prefix, and `CAS` identifies the CASIC parser.
-- The message id is `CAS01` and the data `5`.
-- The `*19` is the checksum (an XOR of the characters before the `*`)
+
+In this case, support for is provided by `toit-casic-message` parser library.
+The main driver for the device is expected to identify messages starting with
+`$PCAS`, and pass them to `toit-casic-message`.  Remaining messages starting
+with `$` can be passed to the NMEA library, `toit-nmea-message`.
 
 Using this method, a device supporting say, both UBX and NMEA messages, could
 have just the `ubx-message` and `nmea-message` libraries implemented, and a
 ATGM336H driver can have the `nmea-message` and `casic-message` parsers
 implemented.
+
+### Proprietary NMEA messages libraries:
+| Identifier | Vendor/Protocol | Library | Example Modules |
+| - | - | - | - |
+| `$PCASxx` | CASIC  | `toit-casic-nmea-message` | - ATGM336H <br> - AT6558 Silicon |
+| `$PUBX`   | uBlox  | `toit-ubx-nmea-message`   | in development |
+| `$PGRME`  | Garmin | `toit-garmin-nmea-message`   | in development |
+
+> [!WARNING]
+> The driver aims to have the widest capability.  For example, if you have a
+> clone device that supports smaller ranges, the driver may have options
+> available that the device may not practically support, for example, a smaller
+> set of update speeds, or lower baud rates.  Check your datasheet when coding
+> configurations.
 
 ## Caveats
 Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
