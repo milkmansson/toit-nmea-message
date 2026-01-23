@@ -392,32 +392,43 @@ class Cas06 extends Casic-message:
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
-  stringify -> string:
-    return  "$super: info-type:$(INFO-LOOKUP_[payload[1]])"
+  info-type -> int:
+    return int.parse payload[1]
 
+  stringify -> string:
+    return  "$super: info-type:$(INFO-LOOKUP_[info-type])"
+
+/**
+CAS10: Restarting the device.
+*/
 class Cas10 extends Casic-message:
   static ID ::= Casic-message.CAS10
   talker/string := "P"
 
-  static INFO-FIRMWARE ::= 0
-  static INFO-HARDWARE ::= 1
-  static INFO-MODE ::= 2
-  static INFO-CUSTOMER ::= 3
-  static INFO-UPGRADE-CODE ::= 5
-  static INFO-LOOKUP_ ::= {
-    INFO-FIRMWARE: "Firmware",
-    INFO-HARDWARE: "Hardware",
-    INFO-MODE: "Mode",
-    INFO-CUSTOMER: "Customer",
-    INFO-UPGRADE-CODE: "Upgrade"}
+  static START-HOT      ::= 0  // Use existing configuration in initialization.
+  static START-WARM     ::= 1  // Clear the ephemeris without starting initialization.
+  static START-COLD     ::= 2  // Start as if powered off.
+  static START-FACTORY  ::= 3  // Clear all data in the memory and reset the receiver to the factory default.
+  static DISABLE-SERIAL ::= 8  // Disable serial port output. (Opposite of $ENABLE-SERIAL)
+  static ENABLE-SERIAL  ::= 9  // Enable serial output. (Opposite of $DISABLE-SERIAL)
+  static START-LOOKUP_ ::= {
+    START-HOT: "Hot Start",
+    START-WARM: "Warm Start",
+    START-COLD: "Cold Start",
+    START-FACTORY: "Factory Reset",
+    DISABLE-SERIAL: "Disable Serial",
+    ENABLE-SERIAL: "Enable Serial"}
 
-  constructor --info-type/int:
-    assert: INFO-LOOKUP_.contains info-type
-    super.private_ talker ID ["\$$talker$ID", info-type]
+  constructor --start-type/int:
+    assert: START-LOOKUP_.contains start-type
+    super.private_ talker ID ["\$$talker$ID", start-type]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
+  start-type -> int:
+    return int.parse payload[1]
+
   stringify -> string:
-    return  "$super: info-type:$(INFO-LOOKUP_[payload[1]])"
+    return  "$super: restart-type:$(START-LOOKUP_[start-type])"
