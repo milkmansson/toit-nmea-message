@@ -10,19 +10,19 @@ class Nmea-message:
   static DELIMITER_/string ::= ","
   static CHECKSUM-DELIMITER_/string ::= "*"
 
-  // Talker IDs:
+  // Constellation Talker IDs:
   static GPS ::= "GP"
   static GLONASS ::= "GL"
   static GALILEO ::= "GA"
   static BEIDOU ::= "GB"
   static COMBINED ::= "GN"  // Combined GNSS (multi-constellation).
 
-  // AIS:
+  // AIS Talker IDs:
   static AIS ::= "AI"	    // AIS (Automatic Identification System).
   static AIS-BASE ::= "AB"	// AIS base station.
   static AIS-DEP ::= "AD"   // AIS dependent station.
 
-  // Other Talkers:
+  // Other Talker IDs:
   static INT-INST ::= "II"     // Integrated Instrumentation.
   static INT-NAV ::= "IN"      // Integrated Navigation.
   static HEADING ::= "HC"      // Heading sensor (compass).
@@ -49,12 +49,10 @@ class Nmea-message:
     PROPRIETARY: "Proprietary"
   }
 
-
   // (Known) Proprietary Talkers:
-  static PUBX ::= "Ublox"      // u-blox proprietary
-  static PGRME ::= "Garmin"    // Garmin proprietary
-  static PCAS ::= "Casic"      // Casic proprietary
-
+  static PUBX ::= "Ublox"      // u-blox proprietary.
+  static PGRME ::= "Garmin"    // Garmin proprietary.
+  static PCAS ::= "Casic"      // Casic proprietary.
 
   // Message Formats (IDs):
   static RMC ::= "RMC" // Time, date, lat/lon, speed over ground, course over ground, status.
@@ -78,19 +76,19 @@ class Nmea-message:
   constructor talker/string id/string payload/List:
     if id == Nmea-message.RMC:
       return Rmc.private_ talker id payload
-    if id == Nmea-message.GSA:
+    else if id == Nmea-message.GSA:
       return Gsa.private_ talker id payload
-    if id == Nmea-message.GSV:
+    else if id == Nmea-message.GSV:
       return Gsv.private_ talker id payload
-    if id == Nmea-message.VTG:
+    else if id == Nmea-message.VTG:
       return Vtg.private_ talker id payload
-    if id == Nmea-message.TXT:
+    else if id == Nmea-message.TXT:
       return Txt.private_ talker id payload
-    if id == Nmea-message.GGA:
+    else if id == Nmea-message.GGA:
       return Gga.private_ talker id payload
-    if id == Nmea-message.ZDA:
+    else if id == Nmea-message.ZDA:
       return Zda.private_ talker id payload
-    if id == Nmea-message.GLL:
+    else if id == Nmea-message.GLL:
       return Gll.private_ talker id payload
 
     else:
