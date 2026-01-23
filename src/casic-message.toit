@@ -3,11 +3,13 @@ import io show LITTLE-ENDIAN
 import reader as old-reader
 
 /**
-CASIC GNSS Protocol Parser.
+CASIC GNSS priprietary NMEA message Parser.
 
-CASIC receivers can use CASIC Standard Interface Protocol (CSIP) to send data
-to the host, as well as message extensions to the NMEA Protocol using, using
-proprietary message ids, for example PCASxx.
+CASIC receivers using the NMEA Protocol can support proprietary NMEA messages,
+  for example PCASxx.
+
+Support for the binary CASIC Standard Interface Protocol (CSIP) is provided by
+  a separate driver.  (See https://pkg.toit.io/.)
 */
 
 class Casic-message:
@@ -17,7 +19,7 @@ class Casic-message:
   static DELIMITER_/string ::= ","
   static CHECKSUM-DELIMITER_/string ::= "*"
 
-  talker/string := ?
+  talker/string := "P"
   id/string := ?
   payload/List := ?
 
@@ -36,6 +38,7 @@ class Casic-message:
   static CAS12 ::= "CAS12" // Low power mode.
   static CAS15 ::= "CAS15" // Satellite Types.
   static CAS20 ::= "CAS20" // Online upgrade.
+  static CAS60 ::= "CAS60" // Time Information.
 
   constructor talker/string id/string payload/List:
     if id == Casic-message.CAS03:
@@ -432,3 +435,51 @@ class Cas10 extends Casic-message:
 
   stringify -> string:
     return  "$super: restart-type:$(START-LOOKUP_[start-type])"
+
+/**
+CAS15: Enabling/Disabling specific satellites.
+
+v5200 or later required.
+*/
+
+/**
+CAS60: Receiver Time Information
+
+v5302 or later required.
+*/
+class Cas60 extends Casic-message:
+  static ID ::= Casic-message.CAS60
+  talker/string := "P"
+
+  constructor.private_ .talker/string id/string payload/List:
+    super.private_  talker id payload
+
+  time -> Time:
+    return Time.utc
+      --year=(int.parse (payload[2][5..9]))
+      --month=(int.parse (payload[2][2..5]))
+      --day=(int.parse (payload[2][0..3]))
+      --h=(int.parse (payload[1])[0..2])
+      --m=(int.parse (payload[1])[2..4])
+      --s=(int.parse (payload[1])[4..6])
+      --ms=(int.parse (payload[1])[7..])
+
+  /** GPS System week number. */
+  week-number -> int:
+    return int.parse payload[3]
+
+  /** GPS System seconds of week. */
+  tow -> int:
+    return int.parse payload[4]
+
+  /** If time, $week-number and $tow are valid time. */
+  time-valid -> bool:
+    return payload[5] == "1"
+
+  /** Difference between GPS time and UTC time, leap seconds. */
+  leaps-number -> int:
+    return int.parse payload[6]
+
+  /** If the leap seconds leaps are valid. */
+  leaps-valid -> bool:
+    return payload[7] == "1"
