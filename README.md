@@ -34,11 +34,11 @@ systems (simple GPS modules, legacy devices, low-cost sensors).
 
 ## Usage
 > [!TIP]
-> An issue that often arises with cheap GNSS devices is having all message types
-> enabled, for all satellite types, combined with the often used default of 9600
-> bps Serial connection.  This can be too heavy a load for the low baudrate.
-> In these cases, configuration is requied to either reduce the message load,
-> or, increase the baudrate.
+> An issue can arise with GNSS devices is initially having all message types
+> enabled, for all satellite types - then combined with the often used default
+> of a 9600 bps serial connection.  This can be too heavy a load for the low
+> baudrate.  In these cases, configuration is requied to either reduce the
+> message load, or, increase the baudrate.
 
 ### Multipart messages
 Via inheritance, all messages have the function `is-multipart`.  This is false
@@ -53,7 +53,7 @@ accomodate the NMEA baseline, for any/all possible NMEA sentences.  (Message
 types) added.  Proprietary messages can be identified by the talker `P`,
 followed by some vendor specific characters, terminated by the first comma.
 
-> [!INFORMATION]
+> [!INFO]
 > In order to not have one sprawling parser supporting many devices when a
 > project would usually only have one GNSS device physically attached,
 > proprietary parser libraries are provided separately and whilst some of the
