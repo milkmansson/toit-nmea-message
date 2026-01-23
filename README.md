@@ -60,7 +60,7 @@ followed by some vendor specific characters, terminated by the first comma.
 > code may be similar between them, they are designed not to be dependent on
 > eachother.
 
-Example: A CASIC message for setting th baud rate to 115200 bps looks like this:
+Example: A CASIC message for setting the baud rate to 115200 bps looks like this:
 ```Toit
 $PCAS01,5*19
 ```
@@ -92,9 +92,10 @@ implemented.
 ## Caveats
 Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
 device.  This device only supports 6 NMEA message types (GGA,GLL,GSA,GSV,RMC,
-VTG,ZDA,TXT), but supports CASIC messages for configuration.  Other types have
-had less testing so far.  Please log an [issue](./issues) for assistance
-in adding more.
+VTG,ZDA,TXT), but supports CASIC proprietary NMEA messages for configuration.
+(It also supports CASIC binary format.)
+Other types of devices have had less testing so far.  Please log an
+[issue](./issues) for assistance in adding more.
 
 ## Links:
 I found the following links extremely useful whilst creating this:
