@@ -1,4 +1,4 @@
-# Library for NMEA 0183 message parsing for GNSS
+# Toit Library for NMEA 0183 parsing for GNSS messages
 This Toit library is to add support for NMEA 0183 messages sent by GNSS modules,
 such the Ublox NEO *M and ATGM336H-5N devices.
 
@@ -16,10 +16,10 @@ was [published](https://www.nmea.org/uploads/1/4/0/7/140761515/nmea_0183_v430_pr
 on 5 Jan 2024.
 
 > [!WARNING]
-> NMEA-0183 provides many other message types for other purposes.  These are not
-> yet implemented in this library.  For example, "SafetyNet Vessel in distress
-> information" (SMV), Search and Rescue capabilities (RLM), message types are
-> not yet implemented.
+> NMEA-0183 provides many other message types for other purposes. For example,
+> "SafetyNet Vessel in distress information" (SMV), Search and Rescue
+> capabilities (RLM), and other non GNSS related message types are not yet
+> implemented.
 
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine networking standard (also defined
