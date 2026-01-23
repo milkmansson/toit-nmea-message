@@ -24,11 +24,11 @@ on 5 Jan 2024.
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine networking standard (also defined
 by the NMEA) that uses a CAN-bus–based, binary message protocol to exchange
-navigation and sensor data between devices on a shared network. Unlike NMEA
+navigation and sensor data between devices on a shared network.  Unlike NMEA
 0183, which is a text-based, point-to-point serial format, NMEA 2000 is
 packetized, multi-drop, higher bandwidth, and designed for robust system
-integration; conceptually it carries much of the same information as NMEA 0183,
-but in a structured binary form rather than human-readable sentences.  It has
+integration.  Conceptually it carries same information as NMEA 0183, but in a
+structured binary form rather than pseudo-human-readable sentences.  It has
 largely replaced NMEA 0183 for onboard marine networking, while NMEA 0183
 remains common at the edges of systems (simple GPS modules, legacy devices,
 low-cost sensors).
@@ -78,6 +78,7 @@ add more.
 I found the following links extremely useful whilst creating this:
 - https://www.nmea.org/nmea-0183.html
 - https://gpsd.gitlab.io/gpsd/NMEA.html
+- https://cgit.osmocom.org/osmo-e1-hardware/plain/hardware/icE1usb/components
 
 ## Credits
 This work is an implementation which uses the same core techniques as used in

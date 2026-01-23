@@ -92,7 +92,7 @@ class Nmea-message:
       return Gll.private_ talker id payload
 
     else:
-      print "NMEA sentence type not known to driver: [$talker] [$id] $payload"
+      print "NMEA: sentence type not known to driver: [$talker] [$id]"
       unreachable
 
   constructor.private_ .talker/string .id/string .payload/List:
@@ -152,6 +152,9 @@ class Nmea-message:
       return false
     return true
 
+  /**
+  NMEA checksum is XOR of all characters between $ and * (exclusive).
+  */
   static compute-checksum_ data/string -> int:
     checksum := 0
     data.do: | next |
@@ -178,12 +181,36 @@ class Txt extends Nmea-message:
   static ID ::= Nmea-message.TXT
   talker/string := ?
 
+  static ERROR ::= 0   // Error information.
+  static WARN ::= 1    // Warning message.
+  static NOTICE ::= 2  // Notification information;
+  static USER ::= 7    // User information.
+  static TYPE-LOOKUP_ ::= {
+    ERROR: "Error",
+    WARN: "Warn",
+    NOTICE: "Notice",
+    USER: "User"
+  }
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
-  stringify -> string:
-    return  "$super: $(payload[2..].join ",")"
+  is-multipart -> bool:
+    return payload[1] >= 2
 
+  message-part -> List:
+    return [payload[2], payload[1]]
+
+  type -> int:
+    return int.parse payload[3]
+
+  text -> int:
+    return payload[4]
+
+  stringify -> string:
+    if is-multipart:
+      return  "$super: $message-part $TYPE-LOOKUP_[type]|$text"
+    return  "$super: $TYPE-LOOKUP_[type]|$text"
 
 /**
 GGA: Global Positioning System Fixed Data.
