@@ -60,15 +60,19 @@ The NMEA standard supports proprietary messages.  In this case, support for
 is provided by additional parser libraries.  The driver for the device is
 expected to identify the message and pass it to the correct parser:
 - `$P` prefix, and `CAS` identifies the CASIC parser.
-- In this case the message type is `01` and the data `5`.
+- The message id is `CAS01` and the data `5`.
 - The `*19` is the checksum (an XOR of the characters before the `*`)
 
-Using this method, a device supporting say, UBX and NMEA messages, could have
-just the `ubx-message` and `nmea-message` libraries implemented, and a ATGM336H
-driver can have the `nmea-message` and `casic-message` parsers implemented.
+Using this method, a device supporting say, both UBX and NMEA messages, could
+have just the `ubx-message` and `nmea-message` libraries implemented, and a
+ATGM336H driver can have the `nmea-message` and `casic-message` parsers
+implemented.
 
 ## Caveats
-Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based device.
+Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
+device.  This device only has 6 message types (GGA,GLL,GSA,GSV,RMC,VTG,ZDA,TXT).
+Other types have had less testing so far.  Please log an [issue](./issues) to
+add more.
 
 ## Links:
 I found the following links extremely useful whilst creating this:
