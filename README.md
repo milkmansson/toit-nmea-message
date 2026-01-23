@@ -56,11 +56,11 @@ followed by some vendor specific characters, terminated by the first comma.
 > [!IMPORTANT]
 > In order to not have one sprawling parser supporting many devices when a
 > project would usually only have one GNSS device physically attached,
-> proprietary parser libraries are provided separately and whilst some of the
-> code may be similar between them, to ensure they are as small as possible,
-> they are designed not to be dependent on eachother.
+> proprietary parser libraries are provided separately.  Whilst some of the
+> code may be similar between them, they are designed not to be dependent on
+> eachother.
 
-Example: A CASIC message for increasing baud rate to 115200 bps looks like this:
+Example: A CASIC message for setting th baud rate to 115200 bps looks like this:
 ```Toit
 $PCAS01,5*19
 ```
@@ -79,8 +79,8 @@ implemented.
 | Identifier | Vendor/Protocol | Library | Example Modules |
 | - | - | - | - |
 | `$PCASxx` | CASIC  | `toit-casic-nmea-message` | - ATGM336H <br> - AT6558 Silicon |
-| `$PUBX`   | uBlox  | `toit-ubx-nmea-message`   | in development |
-| `$PGRME`  | Garmin | `toit-garmin-nmea-message`   | in development |
+| `$PUBX`   | uBlox  | in development   | in development |
+| `$PGRME`  | Garmin | in-development   | in development |
 
 > [!WARNING]
 > The driver aims to have the widest capability.  For example, if you have a
@@ -91,9 +91,10 @@ implemented.
 
 ## Caveats
 Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
-device.  This device only has 6 message types (GGA,GLL,GSA,GSV,RMC,VTG,ZDA,TXT).
-Other types have had less testing so far.  Please log an [issue](./issues) to
-add more.
+device.  This device only supports 6 NMEA message types (GGA,GLL,GSA,GSV,RMC,
+VTG,ZDA,TXT), but supports CASIC messages for configuration.  Other types have
+had less testing so far.  Please log an [issue](./issues) for assistance
+in adding more.
 
 ## Links:
 I found the following links extremely useful whilst creating this:
