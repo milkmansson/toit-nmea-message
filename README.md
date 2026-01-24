@@ -41,17 +41,17 @@ systems (simple GPS modules, legacy devices, low-cost sensors).
 > message load, or, increase the baudrate.
 
 ### Multipart messages
-Via inheritance, all messages have the function `is-multipart`.  This is false
-by default, but will be true for messages that have multiple parts.  If
-`is-multipart` is true, the function `message-part` will return a two member
-list: `message-part[0]` returns the message number, and `message-part[1]` will
-return the number of expected messages.
+All messages have the function `is-multipart`.  This is false by default, but is
+set to true for messages that have multiple parts.  If `is-multipart` is true,
+the function `message-part` will return a two member list: `message-part[0]`
+returns the message's own number, and `message-part[1]` will return the total
+number of expected messages.
 
 ### Proprietary messages in NMEA
 The NMEA standard supports proprietary messages. This NMEA parser is designed to
-accomodate the NMEA baseline, for any/all possible NMEA sentences.  (Message
-types) added.  Proprietary messages can be identified by the talker `P`,
-followed by some vendor specific characters, terminated by the first comma.
+accomodate the NMEA baseline, for any/all possible NMEA sentences.  Proprietary
+messages can be identified by the talker code `P`, followed by some vendor
+specific identifier characters and message identifiers, until the first comma.
 
 > [!IMPORTANT]
 > In order to not have one sprawling parser supporting many devices when a
