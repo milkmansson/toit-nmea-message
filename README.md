@@ -75,12 +75,13 @@ have just the `ubx-message` and `nmea-message` libraries implemented, and a
 ATGM336H driver can have the `nmea-message` and `casic-message` parsers
 implemented.
 
-### Proprietary NMEA messages libraries:
+### NMEA message libraries:
 | Identifier | Vendor/Protocol | Library | Example Modules |
 | - | - | - | - |
-| `$PCASxx` | CASIC  | `toit-casic-nmea-message` | - ATGM336H <br> - AT6558 Silicon |
-| `$PUBX`   | uBlox  | in development   | in development |
-| `$PGRME`  | Garmin | in-development   | in development |
+| `$PCASxx` | CASIC (proprietary)  | `toit-casic-nmea-message` | - ATGM336H <br> - AT6558 Silicon |
+| `$PUBX`   | uBlox (proprietary) | in development   | in development |
+| `$PGRME`  | Garmin (proprietary) | in-development   | in development |
+| `$nnxxx`  | NMEA 0183 standard | `toit-nmea-message` | *This driver* |
 
 > [!WARNING]
 > The driver aims to have the widest capability.  For example, if you have a

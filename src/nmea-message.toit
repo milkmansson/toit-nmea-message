@@ -69,6 +69,14 @@ class Nmea-message:
   static GNS ::= "GNS" // GNSS fix data variant (like GGA but for multi-constellation. Some modules output this instead of GGA).
   static TXT ::= "TXT" // Text/status messages (firmware info, warnings, antenna status, etc).
 
+  // More:
+  static DHV ::= "DHV" // Describes receiver speed.
+  static ANT ::= "ANT" // Antenna Information.
+  static LPS ::= "LPS" // Leap Second Information.
+  static UTC ::= "UTC" // Receiver status, simplified information for leap second correction.
+  static GST ::= "GST" // Measurement accuracy details for receiver pseudoranges.
+  static INS ::= "INS" // Inertial Navigation System (INS) information.
+
   talker/string := ?
   id/string := ?
   payload/List := ?
@@ -90,6 +98,8 @@ class Nmea-message:
       return Zda.private_ talker id payload
     else if id == Nmea-message.GLL:
       return Gll.private_ talker id payload
+
+
 
     else:
       print "NMEA: sentence type not known to driver: [$talker] [$id]"

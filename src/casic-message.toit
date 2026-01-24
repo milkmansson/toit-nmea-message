@@ -43,6 +43,8 @@ class Casic-message:
   constructor talker/string id/string payload/List:
     if id == Casic-message.CAS03:
       return Cas03.private_ talker id payload
+    if id == Casic-message.CAS60:
+      return Cas60.private_ talker id payload
     else:
       print "CASIC: sentence type not known to driver: [$talker] [$id]"
       unreachable
@@ -210,11 +212,18 @@ class Cas02 extends Casic-message:
     return  "$super: rate:$OUTPUT-RATE-LOOKUP_[payload[1]]"
 
 /**
-CAS03: Set positioning update rate.
+CAS03: Configures specific messages are output or not.
+
+Values set against the sentence types control how many ticks of Cas02 happen for
+  each message type to be output.
+
+Some devices only support 0 and 1 (0 = disable).  Other devices allow higher
+  numbers allowing for fewer of specific message types to be sent.  Additionally
+  later softwares have additional fields.  (These are shown in the Toitdocs.)
 */
 class Cas03 extends Casic-message:
   static ID ::= Casic-message.CAS03
-  static PAYLOAD-SIZE_ ::= 9
+  static PAYLOAD-SIZE_ ::= 19
   talker/string := "P"
 
   static TYPE-GGA ::= 1
@@ -224,7 +233,14 @@ class Cas03 extends Casic-message:
   static TYPE-RMC ::= 5
   static TYPE-VTG ::= 6
   static TYPE-ZDA ::= 7
-  static TYPE-TXT ::= 8
+  static TYPE-ANT ::= 8
+
+  static TYPE-DHV ::= 9
+  static TYPE-LPS ::= 10
+  static TYPE-UTC ::= 13
+  static TYPE-GST ::= 14
+  static TYPE-TIM ::= 18
+
   static TYPE-LOOKUP_ ::= {
     TYPE-GGA: "GGA",
     TYPE-GLL: "GLL",
@@ -233,48 +249,69 @@ class Cas03 extends Casic-message:
     TYPE-RMC: "RMC",
     TYPE-VTG: "VTG",
     TYPE-ZDA: "ZDA",
-    TYPE-TXT: "TXT",
+    TYPE-ANT: "ANT",
+    TYPE-DHV: "DHV",
+    TYPE-LPS: "LPS",
+    TYPE-UTC: "UTC",
+    TYPE-GST: "GST",
+    TYPE-TIM: "TIM",
   }
 
   constructor
-      --GGA=true
-      --GLL=true
-      --GSA=true
-      --GSV=true
-      --RMC=true
-      --VTG=true
-      --ZDA=true
-      --TXT=true:
+      --gga/int=1
+      --gll/int=1
+      --gsa/int=1
+      --gsv/int=1
+      --rmc/int=1
+      --vtg/int=1
+      --zda/int=1
+      --ant/int=1
+      --dhv/int=0
+      --lps/int=0
+      --utc/int=0
+      --gst/int=0
+      --tim/int=0:
+    assert: 0 <= gga <= 9
     super.private_ talker ID (List PAYLOAD-SIZE_)
     payload[0] = "\$$talker$ID"
-    payload[TYPE-GGA] = GGA ? 1 : 0
-    payload[TYPE-GLL] = GLL ? 1 : 0
-    payload[TYPE-GSA] = GSA ? 1 : 0
-    payload[TYPE-GSV] = GSV ? 1 : 0
-    payload[TYPE-RMC] = RMC ? 1 : 0
-    payload[TYPE-VTG] = VTG ? 1 : 0
-    payload[TYPE-ZDA] = ZDA ? 1 : 0
-    payload[TYPE-TXT] = TXT ? 1 : 0
+    payload[TYPE-GGA] = gga
+    payload[TYPE-GLL] = gll
+    payload[TYPE-GSA] = gsa
+    payload[TYPE-GSV] = gsv
+    payload[TYPE-RMC] = rmc
+    payload[TYPE-VTG] = vtg
+    payload[TYPE-ZDA] = zda
+    payload[TYPE-ANT] = ant
+    payload[TYPE-DHV] = dhv
+    payload[TYPE-LPS] = lps
+    payload[TYPE-UTC] = utc
+    payload[TYPE-GST] = gst
+    payload[TYPE-TIM] = tim
 
   constructor.private_ .talker/string id/string payload/List:
     assert: payload.size == PAYLOAD-SIZE_
     super.private_  talker id payload
 
-  is-gga-enabled -> bool: return payload[TYPE-GGA] == 1
-  is-gll-enabled -> bool: return payload[TYPE-GLL] == 1
-  is-gsa-enabled -> bool: return payload[TYPE-GSA] == 1
-  is-gsv-enabled -> bool: return payload[TYPE-GSV] == 1
-  is-rmc-enabled -> bool: return payload[TYPE-RMC] == 1
-  is-vtg-enabled -> bool: return payload[TYPE-VTG] == 1
-  is-zda-enabled -> bool: return payload[TYPE-ZDA] == 1
-  is-txt-enabled -> bool: return payload[TYPE-TXT] == 1
+  gga-rate -> int: return payload[TYPE-GGA]
+  gll-rate -> int: return payload[TYPE-GLL]
+  gsa-rate -> int: return payload[TYPE-GSA]
+  gsv-rate -> int: return payload[TYPE-GSV]
+  rmc-rate -> int: return payload[TYPE-RMC]
+  vtg-rate -> int: return payload[TYPE-VTG]
+  zda-rate -> int: return payload[TYPE-ZDA]
+  ant-rate -> int: return payload[TYPE-ANT]
+  dhv-rate -> int: return payload[TYPE-DHV]
+  lps-rate -> int: return payload[TYPE-LPS]
+  utc-rate -> int: return payload[TYPE-UTC]
+  gst-rate -> int: return payload[TYPE-GST]
+  tim-rate -> int: return payload[TYPE-TIM]
 
   stringify -> string:
     out := List 0
-    (PAYLOAD-SIZE_ - 1).repeat:
-      if payload[it + 1] == 1:
-        out.add TYPE-LOOKUP_[it + 1]
-    return  "$super: enabled:$(out.join ",")"
+    TYPE-LOOKUP_.keys.do: | key |
+      if (payload[key] != 0) and (payload[key] != "0"):
+        out.add "$TYPE-LOOKUP_[key]:$payload[key])"
+    return  "$super: enabled|$(out.join "|")"
 
 /**
 CAS04: Set Mode.
@@ -435,6 +472,25 @@ class Cas10 extends Casic-message:
 
   stringify -> string:
     return  "$super: restart-type:$(START-LOOKUP_[start-type])"
+
+/**
+CAS12: Receiver Standby Mode Control.
+
+"5L" low-power modules support this command.
+*/
+class Cas12 extends Casic-message:
+  static ID ::= Casic-message.CAS12
+  talker/string := "P"
+
+  constructor --seconds/int:
+    assert: 0 < seconds <= 65535
+    super.private_ talker ID ["\$$talker$ID", "$seconds"]
+
+  seconds -> int:
+    return int.parse payload[1]
+
+  stringify -> string:
+    return  "$super: standby-seconds:$(seconds)"
 
 /**
 CAS15: Enabling/Disabling specific satellites.
