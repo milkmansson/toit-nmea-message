@@ -94,9 +94,9 @@ implemented.
 
 ## Caveats
 Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
-device.  This device only supports 6 NMEA message types (GGA,GLL,GSA,GSV,RMC,
-VTG,ZDA,TXT), but supports CASIC proprietary NMEA messages for configuration.
-(It also supports CASIC binary format.)
+device.  It supports only 6 NMEA message types (GGA,GLL,GSA,GSV,RMC,
+VTG,ZDA,TXT), but supports CASIC proprietary NMEA messages for configuration,
+and the CASIC binary message format.
 Other types of devices have had less testing so far.  Please log an
 [issue](./issues) for assistance in adding more.
 
@@ -108,5 +108,4 @@ I found the following links extremely useful whilst creating this:
 
 ## Credits
 This work is an implementation which uses the same core techniques as used in
-the Toit [ubx-message](https://github.com/toitware/ubx-message) parser.  UBX is
-a proprietary, but widely used protocol.
+the Toit [ubx-message](https://github.com/toitware/ubx-message) parser.
