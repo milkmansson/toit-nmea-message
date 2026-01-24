@@ -78,7 +78,7 @@ implemented.
 ### NMEA message libraries:
 | Identifier | Vendor/Protocol | Library | Example Modules |
 | - | - | - | - |
-| `$nnxxx`  | NMEA 0183 standard   | `toit-nmea-message` | *This driver* |
+| `$nnxxx`  | NMEA 0183 standard   | `toit-nmea-message` <br> *This driver* | Many/most modules  |
 | `$PCASxx` | CASIC (proprietary)  | `toit-casic-nmea-message` | - ATGM336H <br> - AT6558 Silicon |
 | `$PUBX`   | uBlox (proprietary)  | in development | untested |
 | `$PGRME`  | Garmin (proprietary) | in-development | untested |
