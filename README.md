@@ -18,8 +18,8 @@ on 5 Jan 2024.
 > [!WARNING]
 > NMEA-0183 provides many other message types for other purposes. For example,
 > "SafetyNet Vessel in distress information" (SMV), Search and Rescue
-> capabilities (RLM), and other non GNSS related message types are not yet
-> implemented.
+> capabilities (RLM), and other non GNSS related message types are not expected
+> from GNSS devices and currently not implemented.
 
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
