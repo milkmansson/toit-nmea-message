@@ -81,6 +81,7 @@ class Nmea-message:
   id/string := ?
   payload/List := ?
 
+
   constructor talker/string id/string payload/List:
     if id == Nmea-message.RMC:
       return Rmc.private_ talker id payload
