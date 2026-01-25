@@ -32,6 +32,46 @@ than pseudo-human-readable sentences.  It has largely replaced NMEA 0183 for
 onboard marine networking, while NMEA 0183 remains common at the edges of
 systems (simple GPS modules, legacy devices, low-cost sensors).
 
+## NMEA vs device binary parsers
+NMEA is:
+- human-readable
+- lossy
+- slow
+- designed for interoperability, not completeness
+
+Even with proprietary/vendor extensions, NMEA only provides:
+- position / velocity / time
+- fix quality
+- limited satellite info
+- some diagnostics
+
+NMEA does not reliably provide:
+- raw measurements (pseudorange, carrier phase)
+- precise timing data
+- detailed receiver state
+- power / RF diagnostics
+- configuration introspection
+- high-rate output (>10 Hz without pain)
+
+Binary protocols provide:
+- full receiver state
+- precise time
+- raw measurements
+- rich satellite info
+- configuration control
+- high-rate binary data
+- deterministic framing
+- full capabilities as provided by the manufacturer.
+
+Binary protocols exist because NMEA on its own was insufficient for applied
+GNSS solutions.  It may be sufficient for many hobbyist cases that do not need
+full capability, or for cheaper devices that do not have a full binary support
+of their own.  In many devices, factory configurations have a set of NMEA
+messages automatically sent by default.
+
+## Example Use cases
+
+
 ## Usage
 > [!TIP]
 > An issue can arise with GNSS devices is initially having all message types
