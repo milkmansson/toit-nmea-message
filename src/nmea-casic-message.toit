@@ -32,6 +32,9 @@ class NmeaCasicParser:
   static CAS20 ::= "CAS20" // Online upgrade.
   static CAS60 ::= "CAS60" // Time Information.
 
+  // Match Length:
+  static MATCH-LENGTH ::= 8    // Match 6 chars to match these messages.
+
   static messages -> Map:
     message-map := {:}
     message-map[CAS00] = (:: | talker id payload |

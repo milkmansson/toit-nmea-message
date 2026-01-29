@@ -4,10 +4,10 @@ import nmea-message.nmea-ubx-message show *
 
 main:
   nmea-parser := NmeaParser
-  print "started: $nmea-parser.message-count"
+  print "Base NmeaMessage count:       $nmea-parser.message-count"
 
   nmea-parser.add NmeaCasicParser.messages
-  print "now: $nmea-parser.message-count"
+  print "Base+Casic Message count:     $nmea-parser.message-count"
 
   nmea-parser.add NmeaUbxParser.messages
-  print "now: $nmea-parser.message-count"
+  print "Base+Casic+Ubx message count: $nmea-parser.message-count"
