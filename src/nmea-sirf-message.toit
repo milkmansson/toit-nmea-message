@@ -11,8 +11,8 @@ class NmeaSrfParser:
   static PROPRIETARY ::= "P" // Proprietary type, sole supported in this library.
 
   // Message IDs:
-  static PSRF151 ::= "PSRF151" // Position/navigation solution.
-  static PSRF154 ::= "PSRF154" // Time/clock information.
+  static PSRF151 ::= "PSRF,151" // Position/navigation solution.
+  static PSRF154 ::= "PSRF,154" // Time/clock information.
 
   // Match Length: $PSRF,nnn
   static MATCH-LENGTH ::= 9

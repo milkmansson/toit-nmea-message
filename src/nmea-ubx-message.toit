@@ -11,8 +11,8 @@ class NmeaUbxParser:
   static PROPRIETARY ::= "P" // Proprietary type, sole supported in this library.
 
   // Message IDs:
-  static PUBX00 ::= "PUBX00" // Position/navigation solution.
-  static PUBX04 ::= "PUBX04" // Time/clock information.
+  static PUBX00 ::= "PUBX,00" // Position/navigation solution.
+  static PUBX04 ::= "PUBX,04" // Time/clock information.
 
   // Match Length: $PUBX,xx
   static MATCH-LENGTH ::= 8
