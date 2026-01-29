@@ -1,5 +1,4 @@
 import io
-import io show LITTLE-ENDIAN
 import reader as old-reader
 import .nmea-message
 
