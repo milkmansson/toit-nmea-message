@@ -1,0 +1,3 @@
+dependencies:
+  nmea-message:
+    path: ../

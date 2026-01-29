@@ -1,28 +1,21 @@
 import io
 import io show LITTLE-ENDIAN
 import reader as old-reader
+import .nmea-message
 
 /**
-CASIC GNSS priprietary NMEA message Parser.
+CASIC GNSS priprietary NMEA message extension for the NMEA Parser.
 
-CASIC receivers using the NMEA Protocol can support proprietary NMEA messages,
-  for example PCASxx.
+CASIC receivers using the NMEA Protocol support proprietary NMEA messages,
+  prefixed with 'P', in the form `$PCASxx`.  This library's constructor adds the
+  message types in this library to the list of message id's supported by the
+  main NMEA Parser.
 
-Support for the binary CASIC Standard Interface Protocol (CSIP) is provided by
-  a separate driver.  (See https://pkg.toit.io/.)
+Support for the CASIC Standard Interface Protocol (CSIP) binary protocol is
+  provided by a separate driver.  (See https://pkg.toit.io/.)
 */
 
-class Casic-message:
-  static MAX-MESSAGE-SIZE_ ::= 82
-  static NMEA-MAGIC-BYTE_ ::= 0x24  // $ Character.
-  static INVALID-CASIC-MESSAGE_ ::= "INVALID CASIC MESSAGE"
-  static DELIMITER_/string ::= ","
-  static CHECKSUM-DELIMITER_/string ::= "*"
-
-  talker/string := "P"
-  id/string := ?
-  payload/List := ?
-
+class NmeaCasicParser:
   // Talker IDs:
   static PROPRIETARY ::= "P" // Proprietary type, sole supported in this library.
 
@@ -40,107 +33,39 @@ class Casic-message:
   static CAS20 ::= "CAS20" // Online upgrade.
   static CAS60 ::= "CAS60" // Time Information.
 
-  constructor talker/string id/string payload/List:
-    if id == Casic-message.CAS03:
-      return Cas03.private_ talker id payload
-    if id == Casic-message.CAS60:
-      return Cas60.private_ talker id payload
-    else:
-      print "CASIC: sentence type not known to driver: [$talker] [$id]"
-      unreachable
-
-  constructor.private_ .talker/string .id/string .payload/List:
-
-  constructor.from-reader reader/old-reader.Reader:
-    io-reader/io.Reader := reader is io.Reader ? reader as io.Reader : io.Reader.adapt reader
-
-    if (io-reader.peek-byte 0) != NMEA-MAGIC-BYTE_:
-      throw INVALID-CASIC-MESSAGE_
-
-    // Get full the packet (no size information provided) and verify length limits.
-    // Perhaps switch to .read-string --max-size for security?
-    sentence/string ::= io-reader.read-line
-
-    if not sentence.contains-only-ascii:
-      throw INVALID-CASIC-MESSAGE_
-
-    if not is-valid-sentence_ sentence:
-      throw INVALID-CASIC-MESSAGE_
-
-    first-comma/int := sentence.index-of DELIMITER_
-    if first-comma < 4 or first-comma == -1 :
-      throw INVALID-CASIC-MESSAGE_
-
-    type/string := sentence[1..first-comma]
-
-    // Remove delimiter
-    data := sentence
-    cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
-    if cs-delimiter != -1:
-      data = sentence[..cs-delimiter]
-
-    // First: Proprietary type
-    if type[0] == 'P':
-      return Casic-message "P" type[1..] (data.split DELIMITER_)
-
-    // Second: First two characters are talker
-    return Casic-message type[0..2] type[2..] (data.split DELIMITER_)
-
-  static is-valid-sentence_ sentence/string -> bool:
-    // Check the payload length.
-    if not 0 <= sentence.size <= MAX-MESSAGE-SIZE_:
-      return false
-      //throw "$INVALID-NMEA-MESSAGE_: invalid size"
-
-    // Check checksum.
-    cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
-    if cs-delimiter == -1 :
-      // checksum missing (allowed in spec)
-      return true
-
-    message := sentence[1..cs-delimiter]
-    checksum := int.parse (sentence[(cs-delimiter+1)..])  --radix=16
-
-    if (compute-checksum_ message) != checksum:
-      return false
-    return true
-  /**
-  Checksum is XOR of all characters between $ and * (exclusive).
-  */
-  static compute-checksum_ data/string -> int:
-    checksum := 0
-    data.do: | next |
-      checksum ^= next
-    return checksum
-
-  /** The message type name in full format. */
-  full-name -> string:
-    return "CASIC-$talker-$id"
-
-  /** Is this message multipart? */
-  is-multipart -> bool:
-    return false
-
-  message-part -> List:
-    return [1, 1]
-
-  /** See $super. */
-  stringify -> string:
-    return full-name
-
-  /**
-  Used by the driver when sending the message to the device.
-  */
-  to-string -> string:
-    outstring := payload.join ","
-    checksum := Casic-message.compute-checksum_ outstring
-    return "$outstring*$checksum"
+  static messages -> Map:
+    message-map := {:}
+    message-map[CAS00] = (:: | talker id payload |
+      Cas00.private_ PROPRIETARY id payload)
+    message-map[CAS01] = (:: | talker id payload |
+      Cas01.private_ PROPRIETARY id payload)
+    message-map[CAS02] = (:: | talker id payload |
+      Cas02.private_ PROPRIETARY id payload)
+    message-map[CAS03] = (:: | talker id payload |
+      Cas03.private_ PROPRIETARY id payload)
+    message-map[CAS04] = (:: | talker id payload |
+      Cas04.private_ PROPRIETARY id payload)
+    message-map[CAS05] = (:: | talker id payload |
+      Cas05.private_ PROPRIETARY id payload)
+    message-map[CAS06] = (:: | talker id payload |
+      Cas06.private_ PROPRIETARY id payload)
+    message-map[CAS10] = (:: | talker id payload |
+      Cas10.private_ PROPRIETARY id payload)
+//    message-map[CAS12] = (:: | talker id payload |
+//      Cas12.private_ PROPRIETARY id payload)
+//    message-map[CAS15] = (:: | talker id payload |
+//      Cas15.private_ PROPRIETARY id payload)
+//    message-map[CAS20] = (:: | talker id payload |
+//      Cas20.private_ PROPRIETARY id payload)
+    message-map[CAS60] = (:: | talker id payload |
+      Cas60.private_ PROPRIETARY id payload)
+    return message-map
 
 /**
 CAS00: Save current configuration in flash.
 */
-class Cas00 extends Casic-message:
-  static ID ::= Casic-message.CAS00
+class Cas00 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS00
   talker/string := "P"
 
   constructor:
@@ -153,8 +78,8 @@ class Cas00 extends Casic-message:
 /**
 CAS02: Set Baud Rate.
 */
-class Cas01 extends Casic-message:
-  static ID ::= Casic-message.CAS01
+class Cas01 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS01
   talker/string := "P"
 
   static BAUD-4800 ::= 0   // 4800 bps
@@ -182,8 +107,8 @@ class Cas01 extends Casic-message:
 /**
 CAS02: Set positioning update rate.
 */
-class Cas02 extends Casic-message:
-  static ID ::= Casic-message.CAS02
+class Cas02 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS02
   talker/string := "P"
 
   static OUTPUT-02HZ ::= 5000 // Update rate 0.2Hz, 1 message per 5 seconds.
@@ -221,8 +146,8 @@ Some devices only support 0 and 1 (0 = disable).  Other devices allow higher
   numbers allowing for fewer of specific message types to be sent.  Additionally
   later softwares have additional fields.  (These are shown in the Toitdocs.)
 */
-class Cas03 extends Casic-message:
-  static ID ::= Casic-message.CAS03
+class Cas03 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS03
   static PAYLOAD-SIZE_ ::= 19
   talker/string := "P"
 
@@ -319,8 +244,8 @@ CAS04: Set Mode.
 The mask can be any combination of GPS/BDS/GLONASS OR'd together, for example,
   (GPS | BDS | GLONASS) which would be 7.
 */
-class Cas04 extends Casic-message:
-  static ID ::= Casic-message.CAS04
+class Cas04 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS04
   talker/string := "P"
 
   static GPS     ::= 0b00001
@@ -373,8 +298,8 @@ Values:
 - $MIXED-GNSS: BDS/GPS dual-mode, compatible with NMEA 2.3+/4.0 (default)
 - $LEGACY-GPS-ONLY: GPS-only, compatible with NMEA 2.2
 */
-class Cas05 extends Casic-message:
-  static ID ::= Casic-message.CAS05
+class Cas05 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS05
   talker/string := "P"
 
   static NMEA-41-STRICT ::= 2
@@ -404,12 +329,12 @@ PCAS06: Query information from the device.
 Information values:
 - $INFO-FIRMWARE: Query firmware version number
 - $INFO-HARDWARE: Query hardware model and serial number
-- 2=Query the working mode of the multimode receiver
-- 3=Query the customer number of the product
-- 5=Query upgrade code information
+- $INFO-MODE: Query the working mode of the multimode receiver
+- $INFO-CUSTOMER: Query the customer number of the product
+- $INFO-CUSTOMER: Query upgrade code information
 */
-class Cas06 extends Casic-message:
-  static ID ::= Casic-message.CAS06
+class Cas06 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS06
   talker/string := "P"
 
   static INFO-FIRMWARE ::= 0
@@ -441,8 +366,8 @@ class Cas06 extends Casic-message:
 /**
 CAS10: Restarting the device.
 */
-class Cas10 extends Casic-message:
-  static ID ::= Casic-message.CAS10
+class Cas10 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS10
   talker/string := "P"
 
   static START-HOT      ::= 0  // Use existing configuration in initialization.
@@ -478,8 +403,8 @@ CAS12: Receiver Standby Mode Control.
 
 "5L" low-power modules support this command.
 */
-class Cas12 extends Casic-message:
-  static ID ::= Casic-message.CAS12
+class Cas12 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS12
   talker/string := "P"
 
   constructor --seconds/int:
@@ -503,8 +428,8 @@ CAS60: Receiver Time Information
 
 v5302 or later required.
 */
-class Cas60 extends Casic-message:
-  static ID ::= Casic-message.CAS60
+class Cas60 extends NmeaMessage:
+  static ID ::= NmeaCasicParser.CAS60
   talker/string := "P"
 
   constructor.private_ .talker/string id/string payload/List:

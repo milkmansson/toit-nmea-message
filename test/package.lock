@@ -1,0 +1,5 @@
+prefixes:
+  nmea-message: ..
+packages:
+  ..:
+    path: ..

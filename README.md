@@ -21,6 +21,10 @@ on 5 Jan 2024.
 > capabilities (RLM), and other non GNSS related message types are not expected
 > from GNSS devices and currently not implemented.
 
+### NMEA Versions:
+- BeiDou and Galileo: Only NMEA version 4.10 and later have support for these systems.
+- QZSS: Only NMEA version 4.11 and later have support for this system.
+
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
 that uses a CAN-bus–based, binary message protocol to exchange navigation/sensor
