@@ -14,8 +14,8 @@ class NmeaUbxParser:
   static PUBX00 ::= "PUBX00" // Position/navigation solution.
   static PUBX04 ::= "PUBX04" // Time/clock information.
 
-  // Match Length:
-  static MATCH-LENGTH ::= 6    // Match 8 chars to match these messages.
+  // Match Length: $PUBX,xx
+  static MATCH-LENGTH ::= 8
 
   static messages -> Map:
     message-map := {:}

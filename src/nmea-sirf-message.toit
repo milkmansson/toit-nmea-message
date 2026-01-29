@@ -14,8 +14,8 @@ class NmeaSrfParser:
   static PSRF151 ::= "PSRF151" // Position/navigation solution.
   static PSRF154 ::= "PSRF154" // Time/clock information.
 
-  // Match Length:
-  static MATCH-LENGTH ::= 8    // Match 8 chars to match these messages.
+  // Match Length: $PSRF,nnn
+  static MATCH-LENGTH ::= 9
 
   static messages -> Map:
     message-map := {:}
@@ -30,7 +30,7 @@ class NmeaSrfParser:
 PSRF151: Navigation Parameters (Position/velocity/fix).
 */
 class Srf151 extends NmeaMessage:
-  static ID ::= NmeaSrfParser.PUBX00
+  static ID ::= NmeaSrfParser.PSRF151
   talker/string := "PSRF"
 
   constructor:
@@ -45,7 +45,7 @@ class Srf151 extends NmeaMessage:
 PSRF154: Time & date information.
 */
 class Srf154 extends NmeaMessage:
-  static ID ::= NmeaSrfParser.PUBX04
+  static ID ::= NmeaSrfParser.PSRF154
   talker/string := "PSRF"
 
   constructor:

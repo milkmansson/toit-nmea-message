@@ -32,8 +32,8 @@ class NmeaCasicParser:
   static CAS20 ::= "CAS20" // Online upgrade.
   static CAS60 ::= "CAS60" // Time Information.
 
-  // Match Length:
-  static MATCH-LENGTH ::= 8    // Match 6 chars to match these messages.
+  // Match Length: $PCASnn = 7 Characters
+  static MATCH-LENGTH ::= 7
 
   static messages -> Map:
     message-map := {:}
