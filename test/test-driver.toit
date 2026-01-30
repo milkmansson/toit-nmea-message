@@ -14,9 +14,13 @@ import nmea-message
 
 
 /**
-Driver for u-blox GNSS devices.
+Generic driver for GNSS devices.
 
-Originally developed for the Max M8 GPS module.
+Driver simply sets up an adapter and puts all messages through the NMEA message
+  parser, displaying the results.
+
+Is a cut down version of the https://github.com/toitware/ublox-gnss-driver,
+  tailored only to this task.
 */
 
 class Driver:
@@ -24,6 +28,8 @@ class Driver:
   static UBX-MAGIC-BYTE_ ::= 0xb5
   static NMEA-MAGIC-BYTE_ ::= 0x24
   static AIS-MAGIC-BYTE_ ::= 0x21
+
+  static COMMAND-TIMEOUT_ ::= Duration --s=5
 
   // NMEA Helpers while a protocol specific parser doesn't exist.
   // See $disable-nmea-messages.
@@ -43,10 +49,7 @@ class Driver:
   }
 
   // Latches/Mutexes for managing and acknowledging commands
-  waiters-latch_ := []             // Stores latches for all users until fix.
-  waiters-mutex_ := monitor.Mutex  // Prevent race when $waiters_ is read/written.
   command-mutex_ := monitor.Mutex  // Used to ensure one command at once.
-  command-latch_ := monitor.Latch  // Used to ensure cfg gets the result.
 
   // Loggers - one for driver, and separate one for UBX device sourced messages.
   logger_/log.Logger := ?
@@ -128,10 +131,8 @@ class Driver:
           // Store latest version of messages for other handlers to use.
           latest-message[message.full-name] = message
 
-
-          else:
-            //logger_.debug  "Driver received UNHANDLED message type: $message"
-            logger_.debug "$message"
+          //logger_.debug  "Driver received UNHANDLED message type: $message"
+          //logger_.debug "$message"
 
     start-latch.get
     logger_.debug "message receiver started" --tags={"ms": duration.in-ms}
@@ -185,40 +186,34 @@ class Driver:
     via the $COMMAND-TIMEOUT-MS_ timeout path, and to catch the relevant message
     that matches the command.
   */
-  send-message message/NmeaMessage --return-immediately/bool=false -> ubx-message.Message?:
+  send-message message/any --return-immediately/bool=false -> none:
     response := message
     command-mutex_.do:
       if return-immediately:
         if msg-debug_: logger_.debug "SEND  <-" --tags={"message" : message}
         adapter_.send-packet message.to-byte-array
-        return null
-
-      // Reset the latch to prevent stray ACK/NAK getting used.
-      command-latch_ = monitor.Latch
+        return //null
 
       // todo: try/finally.
       // todo: determine if/how we should convert to semphore.
       duration := Duration.ZERO
       if msg-debug_: logger_.debug "SEND  <-" --tags={"message" : message}
       exception := catch:
-        with-timeout --ms=COMMAND-TIMEOUT-MS_:
+        with-timeout COMMAND-TIMEOUT_:
           duration = Duration.of:
             adapter_.send-packet message.to-byte-array
-            response = command-latch_.get
 
-      // Set latch to null if we're not using it.
-      command-latch_ = null
 
       // Sleep a moment
       sleep --ms=50
 
       if exception:
         logger_.error "Command timed out. " --tags={"message":"$(message)", "ms":duration.in-ms}
-        return null
+        return  //null
 
     // Lets have the return message supplied back to the caller to determine
     // what to do with it.
-    return response
+    return  //response
 
 
 class Adapter_:
@@ -252,19 +247,21 @@ class Adapter_:
     writer_.write bytes
     sleep STREAM-DELAY_
 
-  send-ubx message/ubx-message.Message -> none:
+  send-message message/any -> none:
     writer_.write message.to-byte-array
     sleep STREAM-DELAY_
 
   next-message -> any: //ubx-message.Message:
     while true:
       peek ::= reader_.peek-byte 0
+
       if peek == UBX-MAGIC-BYTE_: // UBX protocol
         e := catch: return ubx-message.Message.from-reader reader_
         log.warn "error parsing ubx message" --tags={"error": e}
+
       if peek == NMEA-MAGIC-BYTE_: // NMEA protocol
         //return Nmea-message.from-reader reader_
-        e := catch: return Nmea-message.from-reader reader_
+        e := catch: return nmea-message.NmeaParser.from-reader reader_
         log.warn "error parsing nmea message" --tags={"error": e}
 
       // Go to next byte.
