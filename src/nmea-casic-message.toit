@@ -1,14 +1,10 @@
-import io
-import reader as old-reader
 import .nmea-message
 
 /**
 CASIC GNSS priprietary NMEA message extension for the NMEA Parser.
 
 CASIC receivers using the NMEA Protocol support proprietary NMEA messages,
-  prefixed with 'P', in the form `$PCASxx`.  This library's constructor adds the
-  message types in this library to the list of message id's supported by the
-  main NMEA Parser.
+  prefixed with 'P', in the form `$PCASxx`.
 
 Support for the CASIC Standard Interface Protocol (CSIP) binary protocol is
   provided by a separate driver.  (See https://pkg.toit.io/.)
@@ -31,9 +27,6 @@ class NmeaCasicParser:
   static CAS15 ::= "CAS15" // Satellite Types.
   static CAS20 ::= "CAS20" // Online upgrade.
   static CAS60 ::= "CAS60" // Time Information.
-
-  // Match Length: $PCASnn = 7 Characters
-  static MATCH-LENGTH ::= 7
 
   static messages -> Map:
     message-map := {:}

@@ -78,25 +78,25 @@ class NmeaParser:
   static INS ::= "INS" // Inertial Navigation System (INS) information.
 
   // Type Registry:
-  registry_/Map := {:}
+  registry/Map := {:}
 
   constructor:
     // Build the registry and register all the types:
-    registry_[RMC] = (:: | talker id payload |
+    registry[RMC] = (:: | talker id payload |
       Rmc.private_ talker id payload)
-    registry_[GSA] = (:: | talker id payload |
+    registry[GSA] = (:: | talker id payload |
       Gsa.private_ talker id payload)
-    registry_[GSV] = (:: | talker id payload |
+    registry[GSV] = (:: | talker id payload |
       Gsv.private_ talker id payload)
-    registry_[VTG] = (:: | talker id payload |
+    registry[VTG] = (:: | talker id payload |
       Vtg.private_ talker id payload)
-    registry_[TXT] = (:: | talker id payload |
+    registry[TXT] = (:: | talker id payload |
       Txt.private_ talker id payload)
-    registry_[GGA] = (:: | talker id payload |
+    registry[GGA] = (:: | talker id payload |
       Gga.private_ talker id payload)
-    registry_[ZDA] = (:: | talker id payload |
+    registry[ZDA] = (:: | talker id payload |
       Zda.private_ talker id payload)
-    registry_[GLL] = (:: | talker id payload |
+    registry[GLL] = (:: | talker id payload |
       Gll.private_ talker id payload)
 
   from-reader reader/old-reader.Reader:
@@ -109,37 +109,50 @@ class NmeaParser:
     // Perhaps switch to .read-string --max-size for security?
     sentence/string ::= io-reader.read-line
 
+    // Unsure about this one.  SiRF encodes binary data in its NMEA (allegedly).
     if not sentence.contains-only-ascii:
       throw "$INVALID-NMEA-MESSAGE_: sentence not completely ascii"
 
+    // Other checks done this way as they are checks that can be done after
+    // message modification.
     if not is-valid-sentence_ sentence:
       throw "$INVALID-NMEA-MESSAGE_: sentence invalid"
 
+    // Ensure a comma exists and a meaningful header.
     first-comma/int := sentence.index-of DELIMITER_
-    if first-comma < 4 or first-comma == -1 :
-      throw "$INVALID-NMEA-MESSAGE_: malformed header"
+    second-comma/int := sentence.index-of DELIMITER_ first-comma
+    if first-comma < 4 or first-comma == -1 or second-comma == -1:
+      throw "$INVALID-NMEA-MESSAGE_: malformed header/body"
 
-    type/string := sentence[1..first-comma]
-
-    // Remove delimiter
-    data := sentence
-    cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
-    if cs-delimiter != -1:
-      data = sentence[..cs-delimiter]
+    // Type-1 message ID information goes to first comma. (Drops '$'.)
+    type-1/string := sentence[1..first-comma]
 
     talker/string := ?
     id/string := ?
-    if type[0..1] == "P":
-      talker = type[0..1]
-      id = type[1..]
-    else:
-      talker = type[0..2]
-      id = type[2..]
+    if type-1[0..1] == "P":
+      // Type 1 Message handling:
+      talker = type-1[0..1]
+      id = type-1[1..]
+      if registry.contains id:
+        return registry[id].call talker id (sentence.split DELIMITER_)
 
-    if registry_.contains id:
-      return registry_[id].call talker id (data.split DELIMITER_)
+      // Message is a P, but must be type 2: message ID information goes to second comma.
+      type-2/string := sentence[1..second-comma]
+      id2 := type-2[1..]
+      if registry.contains id2:
+        return registry[id2].call talker id (sentence.split DELIMITER_)
+
+      throw "Unknown proprietary message type '\$P$id' or '\$P$id2'"
+
     else:
-      throw "Unknown message type $id"
+      // Message must be an NMEA native message:
+      talker = type-1[0..2]
+      id = type-1[2..]
+
+      if registry.contains id:
+        return registry[id].call talker id (sentence.split DELIMITER_)
+      else:
+        throw "Unknown message type $id"
 
 
   static is-valid-sentence_ sentence/string -> bool:
@@ -176,10 +189,10 @@ class NmeaParser:
   */
   add input-map/Map -> none:
     input-map.keys.do: | id |
-      registry_[id] = input-map[id]
+      registry[id] = input-map[id]
 
   message-count -> int:
-    return registry_.size
+    return registry.size
 
 
 abstract class NmeaMessage:
