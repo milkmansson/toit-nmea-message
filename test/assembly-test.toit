@@ -26,3 +26,4 @@ main:
   print "List of all message types ($nmea-parser.message-count): "
   nmea-parser.registry.keys.do:
     print " - $it"
+

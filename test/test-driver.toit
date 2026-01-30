@@ -25,14 +25,8 @@ Is a cut down version of the https://github.com/toitware/ublox-gnss-driver,
 
 class Driver:
 
-  static UBX-MAGIC-BYTE_ ::= 0xb5
-  static NMEA-MAGIC-BYTE_ ::= 0x24
-  static AIS-MAGIC-BYTE_ ::= 0x21
-
   static COMMAND-TIMEOUT_ ::= Duration --s=5
 
-  // NMEA Helpers while a protocol specific parser doesn't exist.
-  // See $disable-nmea-messages.
   static NMEA-CLASS-ID_ := 0xF0
   static NMEA-MESSAGE-IDS_ := {
     "GGA": 0x00,
@@ -53,7 +47,6 @@ class Driver:
 
   // Loggers - one for driver, and separate one for UBX device sourced messages.
   logger_/log.Logger := ?
-  msg-debug_ := false
 
   // Container for the message receiver task.
   runner_/Task? := null
@@ -76,24 +69,10 @@ class Driver:
     supported for backwards compatibility. Support for "old-style" writers is
     deprecated and will be removed in a future release.
   Use $Writer to create an $io.Writer from a $serial.Device.
-
-  When starting the driver with defaults, the driver subscribes to the messages
-    required to find location and time.  For advanced users looking to prevent
-    the default operation, and create subscriptions/messge handlers, etc,
-    themselves, specify `--no-auto-run` on the constructor.  In this case,
-    users must set required configurations (via $send-message-cfg), subscribe
-    to desired message types (via $send-set-message-rate), and then start
-    the message receiver task ($run) manually.
   */
 
-  constructor reader writer logger=log.default
-      --auto-run/bool=true
-      --force-protocol-version/string?=null
-      --hw-reset/bool=false
-      --sw-reset/bool=false
-      --message-debug/bool=false:
+  constructor reader writer parser/nmea-message.NmeaParser logger/log.Logger=log.default:
     logger_ = logger.with-name "nmea-driver"
-    msg-debug_ = message-debug
 
     if reader is old-reader.Reader:
       reader = io.Reader.adapt reader
@@ -101,11 +80,10 @@ class Driver:
     if writer is not io.Writer:
       writer = io.Writer.adapt writer
 
-    adapter_ = Adapter_ reader writer logger
+    adapter_ = Adapter_ reader writer logger parser
 
-    if auto-run:
-      // Start message receiver task (and wait for it to start).
-      run
+    // Start message receiver task (and wait for it to start).
+    run
 
 
   /**
@@ -126,13 +104,10 @@ class Driver:
         start-latch.set true
         while true:
           message := adapter_.next-message
-          if msg-debug_: logger_.debug "RECV  ->" --tags={"message" : message}
+          logger_.debug "RECV  ->" --tags={"message" : message}
 
           // Store latest version of messages for other handlers to use.
           latest-message[message.full-name] = message
-
-          //logger_.debug  "Driver received UNHANDLED message type: $message"
-          //logger_.debug "$message"
 
     start-latch.get
     logger_.debug "message receiver started" --tags={"ms": duration.in-ms}
@@ -164,16 +139,14 @@ class Driver:
 
   /** Send a raw byte array to the device, for debug purposes. */
   send-raw-byte-array bytes/ByteArray -> none:
-    logger_.debug "sending raw bytearray: $bytes"
-    if msg-debug_: logger_.debug "SEND  <-" --tags={"bytes" : bytes}
+    logger_.debug "SEND  <-" --tags={"bytes" : bytes}
     command-mutex_.do:
       adapter_.send-packet bytes
 
 
   /** Send a user created message to the device, for debug purposes. */
   send-raw-message message/any -> none:
-    logger_.debug "sending custom message: $message"
-    if msg-debug_: logger_.debug "SEND  <-" --tags={"message" : message}
+    logger_.debug "SEND  <-" --tags={"message" : message}
     command-mutex_.do:
       adapter_.send-packet message.to-byte-array
 
@@ -183,21 +156,21 @@ class Driver:
   Handles logic of success and failure messages, while not blocking other
     message traffic being handled by the driver.  Note that new/custom message
     types being sent may require latch handling to avoid always being handled
-    via the $COMMAND-TIMEOUT-MS_ timeout path, and to catch the relevant message
+    via the $COMMAND-TIMEOUT_ timeout path, and to catch the relevant message
     that matches the command.
   */
   send-message message/any --return-immediately/bool=false -> none:
     response := message
     command-mutex_.do:
       if return-immediately:
-        if msg-debug_: logger_.debug "SEND  <-" --tags={"message" : message}
+        logger_.debug "SEND  <-" --tags={"message" : message}
         adapter_.send-packet message.to-byte-array
         return //null
 
       // todo: try/finally.
       // todo: determine if/how we should convert to semphore.
       duration := Duration.ZERO
-      if msg-debug_: logger_.debug "SEND  <-" --tags={"message" : message}
+      logger_.debug "SEND  <-" --tags={"message" : message}
       exception := catch:
         with-timeout COMMAND-TIMEOUT_:
           duration = Duration.of:
@@ -227,8 +200,9 @@ class Adapter_:
   logger_/log.Logger
   reader_/io.Reader
   writer_/io.Writer
+  parser_/nmea-message.NmeaParser
 
-  constructor .reader_ .writer_ .logger_:
+  constructor .reader_ .writer_ .logger_ .parser_:
 
   flush -> none:
     // Flush all data up to this point.
@@ -255,13 +229,9 @@ class Adapter_:
     while true:
       peek ::= reader_.peek-byte 0
 
-      if peek == UBX-MAGIC-BYTE_: // UBX protocol
-        e := catch: return ubx-message.Message.from-reader reader_
-        log.warn "error parsing ubx message" --tags={"error": e}
-
       if peek == NMEA-MAGIC-BYTE_: // NMEA protocol
         //return Nmea-message.from-reader reader_
-        e := catch: return nmea-message.NmeaParser.from-reader reader_
+        e := catch: return parser_.from-reader reader_
         log.warn "error parsing nmea message" --tags={"error": e}
 
       // Go to next byte.

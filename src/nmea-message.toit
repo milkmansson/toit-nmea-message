@@ -2,10 +2,12 @@ import io
 import io show LITTLE-ENDIAN
 import reader as old-reader
 
-
 class NmeaParser:
-  static MAX-MESSAGE-SIZE_ ::= 82
+  static UBX-MAGIC-BYTE_ ::= 0xb5
   static NMEA-MAGIC-BYTE_ ::= 0x24
+  static AIS-MAGIC-BYTE_ ::= 0x21
+
+  static MAX-MESSAGE-SIZE_ ::= 82
   static INVALID-NMEA-MESSAGE_ ::= "INVALID NMEA MESSAGE"
   static DELIMITER_/string ::= ","
   static CHECKSUM-DELIMITER_/string ::= "*"
