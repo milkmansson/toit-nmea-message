@@ -81,6 +81,8 @@ class NmeaParser:
   static GST ::= "GST" // Measurement accuracy details for receiver pseudoranges.
   static INS ::= "INS" // Inertial Navigation System (INS) information.
 
+  // Query
+  static QUERY ::= "Q"
 
   // Type Registry:
   registry/Map := {:}
@@ -208,11 +210,16 @@ class NmeaParser:
 
 
 abstract class NmeaMessage:
-  talker/string := ?
-  id/string := ?
-  payload/List := ?
+  static ID ::= "NONE"
+  talker/string := ""
+  id/string := ""
+  payload/List := []
 
   constructor.private_ .talker/string .id/string .payload/List:
+
+  /** If this message is a poll. */
+  is-poll -> bool:
+    return id == ID
 
   /** If this message is multipart. */
   is-multipart -> bool:
@@ -234,7 +241,7 @@ abstract class NmeaMessage:
     outstring := payload.join ","
     checksum := NmeaParser.compute-checksum_ outstring
     checksum-string := "$(%02x checksum)"
-    return "\$$outstring*$checksum-string"
+    return "\$$outstring*$checksum-string\r\n"
 
 class Txt extends NmeaMessage:
   static ID ::= NmeaParser.TXT
@@ -289,6 +296,11 @@ class Gga extends NmeaMessage:
     QUALITY-ESTIMATE-GNSS-FIX: "Estimate/Dead Reckoning Fix",
   }
 
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
@@ -341,6 +353,11 @@ class Zda extends NmeaMessage:
   static ID ::= NmeaParser.ZDA
   talker/string := ?
 
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
@@ -371,20 +388,27 @@ class Vtg extends NmeaMessage:
   static ID ::= NmeaParser.VTG
   talker/string := ?
 
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
   true-course -> float:
-    //print "PARSING $payload[1]"
     return float.parse payload[1]
+
+  magnetic-course -> float:
+    return float.parse payload[3]
 
   speed-kmh -> float:
     //print "KMH PARSING $payload"
-    return float.parse payload[5]
+    return float.parse payload[7]
 
   speed-kts -> float:
     //print "KMH PARSING $payload[7]"
-    return float.parse payload[7]
+    return float.parse payload[5]
 
   positioning-mode -> string:
     return payload[9]
@@ -403,17 +427,21 @@ class Rmc extends NmeaMessage:
     STATUS-DATA-INVALID: "Data Invalid"
   }
 
-  static SAFE ::= "S"
-  static CAUTION ::= "C"
-  static UNSAFE ::= "U"
-  static NOT-VALID ::= "V"
-
-  static NAV-STATUS-LOOKUP_ ::= {
-    SAFE: "Safe",
-    CAUTION: "Caution",
-    UNSAFE: "Unsafe",
-    NOT-VALID: "Not Valid"
+  static POS-MODE-AUTONOMOUS ::= "A"
+  static POS-MODE-ESTIMATION ::= "E"
+  static POS-MODE-INVALID-DATA ::= "N"
+  static POS-MODE-DIFFERENTIAL ::= "D"
+  static POS-MODE-LOOKUP_ ::= {
+    POS-MODE-AUTONOMOUS: "Autonomous",
+    POS-MODE-ESTIMATION: "Estimation",
+    POS-MODE-INVALID-DATA: "Invalid Data",
+    POS-MODE-DIFFERENTIAL: "Differential"
   }
+
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
@@ -428,24 +456,22 @@ class Rmc extends NmeaMessage:
     return float.parse payload[3]
 
   latitude-n -> string:
-    return payload[3]
+    return payload[4]
 
   longitude -> float:
-    return float.parse payload[4]
+    return float.parse payload[5]
 
   longitude-e -> string:
-    return payload[5]
-
-  speed-kmh -> float:
-    return float.parse payload[6]
+    return payload[6]
 
   speed-kts -> float:
     return float.parse payload[7]
 
-  positioning-mode -> string:
-    return payload[11]
+  /** Course Over Ground. */
+  course -> float:
+    return float.parse payload[8]
 
-  mode -> string:
+  positioning-mode -> string:
     return payload[12]
 
   time -> Time:
@@ -460,8 +486,8 @@ class Rmc extends NmeaMessage:
 
   stringify -> string:
     if status == STATUS-DATA-INVALID:
-      return "$super: status:$(NAV-STATUS-LOOKUP_[status])"
-    return  "$super: status:$(NAV-STATUS-LOOKUP_[status])|mode:$positioning-mode|$time|....."
+      return "$super: status:$(STATUS-LOOKUP_[status])"
+    return  "$super: status:$(STATUS-LOOKUP_[status])|mode:$POS-MODE-LOOKUP_[positioning-mode]|$time|....."
 
 
 class Gll extends NmeaMessage:
@@ -488,7 +514,6 @@ class Gll extends NmeaMessage:
     FIX-RTK: "RTK Fixed",
     FIX-RTK-FLOAT: "RTK Float",
     FIX-DEAD-RECKONING: "Dead Reckoning Fix",
-    STATUS-DATA-INVALID: "Data Invalid"
   }
 
   static POSITION-MODE-AUTONOMOUS ::= "A"
@@ -507,6 +532,11 @@ class Gll extends NmeaMessage:
     POSITION-MODE-RTK-FLOAT: "RTK Float",
     POSITION-MODE-RTK-FIXED: "RTK Fixed",
   }
+
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
@@ -588,6 +618,11 @@ class Gsa extends NmeaMessage:
     SYSTEM-ID-QZSS: "QZSS"
   }
 
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
@@ -631,6 +666,11 @@ class Gsv extends NmeaMessage:
   static ID ::= NmeaParser.GSV
   talker/string := ?
 
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
@@ -666,4 +706,10 @@ class Gsv extends NmeaMessage:
 
   stringify -> string:
     sv-set := svs.keys.join ","
-    return  "$super: $NmeaParser.TALKER-LOOKUP_[talker]:$message-part ($sv-set)"
+    n := message-part[0]
+    x := message-part[1]
+    start := (n - 1) * 4 + 1
+    end := n * 4
+    if end > total-svs: end = total-svs
+    //return  "$super: $NmeaParser.TALKER-LOOKUP_[talker]:$message-part/$total-svs ($sv-set)"
+    return "$super: $NmeaParser.TALKER-LOOKUP_[talker]:[$start-$end/$total-svs] ($sv-set)"

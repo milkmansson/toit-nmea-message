@@ -143,9 +143,11 @@ Some devices only support 0 and 1 (0 = disable).  Other devices allow higher
 */
 class Cas03 extends NmeaMessage:
   static ID ::= NmeaCasicParser.CAS03
-  static PAYLOAD-SIZE_ ::= 19
+  static PAYLOAD-SIZE_ ::= 9
+  static PAYLOAD-SIZE-EXTENDED_ ::= 19
   talker/string := "P"
 
+  // Fields for v3.6 specification
   static TYPE-GGA ::= 1
   static TYPE-GLL ::= 2
   static TYPE-GSA ::= 3
@@ -155,6 +157,7 @@ class Cas03 extends NmeaMessage:
   static TYPE-ZDA ::= 7
   static TYPE-ANT ::= 8
 
+  // Additional fields for v4.2 specification
   static TYPE-DHV ::= 9
   static TYPE-LPS ::= 10
   static TYPE-UTC ::= 13
@@ -177,39 +180,44 @@ class Cas03 extends NmeaMessage:
     TYPE-TIM: "TIM",
   }
 
-  constructor
-      --gga/int=1
-      --gll/int=1
-      --gsa/int=1
-      --gsv/int=1
-      --rmc/int=1
-      --vtg/int=1
-      --zda/int=1
-      --ant/int=1
-      --dhv/int=0
-      --lps/int=0
-      --utc/int=0
-      --gst/int=0
-      --tim/int=0:
-    assert: 0 <= gga <= 9
-    super.private_ talker ID (List PAYLOAD-SIZE_)
+  constructor.poll
+      --gga/int?=null
+      --gll/int?=null
+      --gsa/int?=null
+      --gsv/int?=null
+      --rmc/int?=null
+      --vtg/int?=null
+      --zda/int?=null
+      --ant/int?=null
+
+      --dhv/int?=null
+      --lps/int?=null
+      --utc/int?=null
+      --gst/int?=null
+      --tim/int?=null:
+    payload-size := PAYLOAD-SIZE_
+    if dhv or lps or utc or gst or tim:
+      payload-size = PAYLOAD-SIZE-EXTENDED_
+    super.private_ talker ID (List payload-size)
     payload[0] = "\$$talker$ID"
-    payload[TYPE-GGA] = gga
-    payload[TYPE-GLL] = gll
-    payload[TYPE-GSA] = gsa
-    payload[TYPE-GSV] = gsv
-    payload[TYPE-RMC] = rmc
-    payload[TYPE-VTG] = vtg
-    payload[TYPE-ZDA] = zda
-    payload[TYPE-ANT] = ant
-    payload[TYPE-DHV] = dhv
-    payload[TYPE-LPS] = lps
-    payload[TYPE-UTC] = utc
-    payload[TYPE-GST] = gst
-    payload[TYPE-TIM] = tim
+    payload[TYPE-GGA] = gga ? gga : ""
+    payload[TYPE-GLL] = gll ? gll : ""
+    payload[TYPE-GSA] = gsa ? gsa : ""
+    payload[TYPE-GSV] = gsv ? gsv : ""
+    payload[TYPE-RMC] = rmc ? rmc : ""
+    payload[TYPE-VTG] = vtg ? vtg : ""
+    payload[TYPE-ZDA] = zda ? zda : ""
+    payload[TYPE-ANT] = ant ? ant : ""
+
+    if payload.size == PAYLOAD-SIZE-EXTENDED_:
+      payload[TYPE-DHV] = dhv ? dhv : ""
+      payload[TYPE-LPS] = lps ? lps : ""
+      payload[TYPE-UTC] = utc ? utc : ""
+      payload[TYPE-GST] = gst ? gst : ""
+      payload[TYPE-TIM] = tim ? tim : ""
 
   constructor.private_ .talker/string id/string payload/List:
-    assert: payload.size == PAYLOAD-SIZE_
+    assert: payload.size == PAYLOAD-SIZE_ or payload.size == PAYLOAD-SIZE-EXTENDED_
     super.private_  talker id payload
 
   gga-rate -> int: return payload[TYPE-GGA]
@@ -220,18 +228,22 @@ class Cas03 extends NmeaMessage:
   vtg-rate -> int: return payload[TYPE-VTG]
   zda-rate -> int: return payload[TYPE-ZDA]
   ant-rate -> int: return payload[TYPE-ANT]
-  dhv-rate -> int: return payload[TYPE-DHV]
-  lps-rate -> int: return payload[TYPE-LPS]
-  utc-rate -> int: return payload[TYPE-UTC]
-  gst-rate -> int: return payload[TYPE-GST]
-  tim-rate -> int: return payload[TYPE-TIM]
+  dhv-rate -> int?: return is-extended ? payload[TYPE-DHV] : ""
+  lps-rate -> int?: return is-extended ? payload[TYPE-LPS] : ""
+  utc-rate -> int?: return is-extended ? payload[TYPE-UTC] : ""
+  gst-rate -> int?: return is-extended ? payload[TYPE-GST] : ""
+  tim-rate -> int?: return is-extended ? payload[TYPE-TIM] : ""
+
+  is-extended -> bool:
+    return payload.size == PAYLOAD-SIZE-EXTENDED_
 
   stringify -> string:
     out := List 0
     TYPE-LOOKUP_.keys.do: | key |
-      if (payload[key] != 0) and (payload[key] != "0"):
-        out.add "$TYPE-LOOKUP_[key]:$payload[key])"
-    return  "$super: enabled|$(out.join "|")"
+      if key < payload.size:
+        if (payload[key] != ""):
+          out.add "$TYPE-LOOKUP_[key]:$payload[key])"
+    return  "$super: enabled|$(out.join "|" )"
 
 /**
 CAS04: Set Mode.
