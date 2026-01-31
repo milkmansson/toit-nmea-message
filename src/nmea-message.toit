@@ -16,7 +16,8 @@ class NmeaParser:
   static GPS ::= "GP"
   static GLONASS ::= "GL"
   static GALILEO ::= "GA"
-  static BEIDOU ::= "GB"
+  static BEIDOU1 ::= "GB"
+  static BEIDOU2 ::= "BD"
   static COMBINED ::= "GN"  // Combined GNSS (multi-constellation).
 
   // AIS Talker IDs:
@@ -37,7 +38,8 @@ class NmeaParser:
     GPS: "GPS",
     GLONASS: "Glonass",
     GALILEO: "Galileo",
-    BEIDOU: "Beidou",
+    BEIDOU1: "Beidou",
+    BEIDOU2: "Beidou",
     COMBINED: "COMBINED",
     AIS: "AIS",
     AIS-BASE: "AIS Base Station",
@@ -78,6 +80,7 @@ class NmeaParser:
   static UTC ::= "UTC" // Receiver status, simplified information for leap second correction.
   static GST ::= "GST" // Measurement accuracy details for receiver pseudoranges.
   static INS ::= "INS" // Inertial Navigation System (INS) information.
+
 
   // Type Registry:
   registry/Map := {:}
@@ -120,14 +123,21 @@ class NmeaParser:
     if not is-valid-sentence_ sentence:
       throw "$INVALID-NMEA-MESSAGE_: sentence invalid"
 
+    cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
+    end := cs-delimiter == -1 ? sentence.size : cs-delimiter
+
     // Ensure a comma exists and a meaningful header.
     first-comma/int := sentence.index-of DELIMITER_
-    second-comma/int := sentence.index-of DELIMITER_ first-comma
+    second-comma/int := sentence.index-of DELIMITER_ (first-comma + 1)
     if first-comma < 4 or first-comma == -1 or second-comma == -1:
       throw "$INVALID-NMEA-MESSAGE_: malformed header/body"
 
-    // Type-1 message ID information goes to first comma. (Drops '$'.)
+    // Type-1 message IDs - types (Casic, Garmin) whose message IDs are held in
+    // the first field only. (eg, Message ID definition goes to first comma.)
     type-1/string := sentence[1..first-comma]
+    // Type-2 message IDs - types (UBX, SRF) whose message ID also uses the
+    // next field. (eg, Message ID definition goes to second comma.)
+    type-2/string := sentence[1..second-comma]
 
     talker/string := ?
     id/string := ?
@@ -136,13 +146,13 @@ class NmeaParser:
       talker = type-1[0..1]
       id = type-1[1..]
       if registry.contains id:
-        return registry[id].call talker id (sentence.split DELIMITER_)
+        return registry[id].call talker id (sentence[1..end].split DELIMITER_)
 
       // Message is a P, but must be type 2: message ID information goes to second comma.
-      type-2/string := sentence[1..second-comma]
+
       id2 := type-2[1..]
       if registry.contains id2:
-        return registry[id2].call talker id (sentence.split DELIMITER_)
+        return registry[id2].call talker id2 (sentence[1..end].split DELIMITER_)
 
       throw "Unknown proprietary message type '\$P$id' or '\$P$id2'"
 
@@ -152,14 +162,14 @@ class NmeaParser:
       id = type-1[2..]
 
       if registry.contains id:
-        return registry[id].call talker id (sentence.split DELIMITER_)
+        return registry[id].call talker id (sentence[1..end].split DELIMITER_)
       else:
         throw "Unknown message type $id"
 
 
   static is-valid-sentence_ sentence/string -> bool:
     // Check the payload length.
-    if not 0 <= sentence.size <= MAX-MESSAGE-SIZE_:
+    if sentence.size > MAX-MESSAGE-SIZE_:
       return false
       //throw "$INVALID-NMEA-MESSAGE_: invalid size"
 
@@ -216,11 +226,15 @@ abstract class NmeaMessage:
   stringify -> string:
     return "NMEA-$talker-$id"
 
-  /** Used to create the sentence for sending on the wire. */
+  full-name -> string:
+    return "NMEA-$talker-$id"
+
+  /** Used to create the ASCII sentence for sending on the wire. */
   to-string -> string:
     outstring := payload.join ","
     checksum := NmeaParser.compute-checksum_ outstring
-    return "$outstring*$checksum"
+    checksum-string := "$(%02x checksum)"
+    return "\$$outstring*$checksum-string"
 
 class Txt extends NmeaMessage:
   static ID ::= NmeaParser.TXT
@@ -241,15 +255,15 @@ class Txt extends NmeaMessage:
     super.private_  talker id payload
 
   is-multipart -> bool:
-    return payload[1] >= 2
+    return (int.parse payload[1]) >= 2
 
   message-part -> List:
-    return [payload[2], payload[1]]
+    return [int.parse payload[2], int.parse payload[1]]
 
   type -> int:
     return int.parse payload[3]
 
-  text -> int:
+  text -> string:
     return payload[4]
 
   stringify -> string:
@@ -264,6 +278,17 @@ class Gga extends NmeaMessage:
   static ID ::= NmeaParser.GGA
   talker/string := ?
 
+  static QUALITY-NO-FIX ::= 0
+  static QUALITY-AUTONOMOUS-GNSS-FIX ::= 1
+  static QUALITY-DIFFERENTIAL-GNSS-FIX ::= 2
+  static QUALITY-ESTIMATE-GNSS-FIX ::= 6
+  static QUALITY-LOOKUP_ ::= {
+    QUALITY-NO-FIX: "No Fix",
+    QUALITY-AUTONOMOUS-GNSS-FIX: "Autonomous Fix",
+    QUALITY-DIFFERENTIAL-GNSS-FIX:  "Differential Fix",
+    QUALITY-ESTIMATE-GNSS-FIX: "Estimate/Dead Reckoning Fix",
+  }
+
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
@@ -271,7 +296,6 @@ class Gga extends NmeaMessage:
     return payload[1]
 
   latitude -> float:
-    //print "[$payload[2]]"
     return float.parse payload[2]
 
   latitude-n -> string:
@@ -283,8 +307,11 @@ class Gga extends NmeaMessage:
   longitude-e -> string:
     return payload[5]
 
+  fix-quality -> int:
+    return int.parse payload[6]
+
   is-fix-valid -> bool:
-    return payload[6] == 1
+    return fix-quality > QUALITY-NO-FIX
 
   /** Number of satellites in the message. */
   satellite-count -> int:
@@ -321,6 +348,7 @@ class Zda extends NmeaMessage:
     return int.parse payload[5]
 
   lz-minutes -> int:
+    //print "parsing '$payload[6]'"
     return int.parse payload[6]
 
   time -> Time:
@@ -368,6 +396,13 @@ class Rmc extends NmeaMessage:
   static ID ::= NmeaParser.RMC
   talker/string := ?
 
+  static STATUS-DATA-VALID ::= "A"
+  static STATUS-DATA-INVALID ::= "V"
+  static STATUS-LOOKUP_ ::= {
+    STATUS-DATA-VALID: "Data Valid",
+    STATUS-DATA-INVALID: "Data Invalid"
+  }
+
   static SAFE ::= "S"
   static CAUTION ::= "C"
   static UNSAFE ::= "U"
@@ -383,11 +418,14 @@ class Rmc extends NmeaMessage:
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
-  utc-string -> string:
+  time-utc -> string:
     return payload[1]
 
+  status -> string:
+    return payload[2]
+
   latitude -> float:
-    return float.parse payload[2]
+    return float.parse payload[3]
 
   latitude-n -> string:
     return payload[3]
@@ -407,7 +445,7 @@ class Rmc extends NmeaMessage:
   positioning-mode -> string:
     return payload[11]
 
-  nav-status -> string:
+  mode -> string:
     return payload[12]
 
   time -> Time:
@@ -421,20 +459,20 @@ class Rmc extends NmeaMessage:
       --ms=(int.parse (payload[1])[7..])
 
   stringify -> string:
-    if nav-status == "V":
-      return "$super: $(NAV-STATUS-LOOKUP_[nav-status])"
-    return  "$super: status:$nav-status|mode:$positioning-mode|$time|....."
+    if status == STATUS-DATA-INVALID:
+      return "$super: status:$(NAV-STATUS-LOOKUP_[status])"
+    return  "$super: status:$(NAV-STATUS-LOOKUP_[status])|mode:$positioning-mode|$time|....."
 
 
 class Gll extends NmeaMessage:
   static ID ::= NmeaParser.GLL
   talker/string := ?
 
-  static DATA-VALID ::= "A"
-  static DATA-INVALID ::= "V"
-  static NAV-STATUS-LOOKUP_ ::= {
-    DATA-VALID: "Data Valid",
-    DATA-INVALID: "Data Invalid"
+  static STATUS-DATA-VALID ::= "A"
+  static STATUS-DATA-INVALID ::= "V"
+  static STATUS-LOOKUP_ ::= {
+    STATUS-DATA-VALID: "Data Valid",
+    STATUS-DATA-INVALID: "Data Invalid"
   }
 
   static FIX-NO-FIX ::= 0          // No fix.
@@ -450,7 +488,7 @@ class Gll extends NmeaMessage:
     FIX-RTK: "RTK Fixed",
     FIX-RTK-FLOAT: "RTK Float",
     FIX-DEAD-RECKONING: "Dead Reckoning Fix",
-    DATA-INVALID: "Data Invalid"
+    STATUS-DATA-INVALID: "Data Invalid"
   }
 
   static POSITION-MODE-AUTONOMOUS ::= "A"
@@ -497,8 +535,8 @@ class Gll extends NmeaMessage:
 
   stringify -> string:
     if status == "V":
-      return "$super: $(NAV-STATUS-LOOKUP_[status])"
-    return  "$super: status:$NAV-STATUS-LOOKUP_[status]|mode:$POSITION-MODE-LOOKUP_[positioning-mode]|....."
+      return "$super: $(STATUS-LOOKUP_[status])"
+    return  "$super: status:$STATUS-LOOKUP_[status]|mode:$POSITION-MODE-LOOKUP_[positioning-mode]|....."
 
 /**
 GSA: GNSS DOP and Active Satellites.
@@ -514,6 +552,7 @@ a. GPS: 01-32
 b. SBAS: 33-51 (120 to 138)
 c. GLONASS: 65-92 (01 to 28)
 d. QZSS: 93-99 (193 to 199)
+
 */
 class Gsa extends NmeaMessage:
   static ID ::= NmeaParser.GSA
@@ -526,6 +565,7 @@ class Gsa extends NmeaMessage:
     OPERATION-AUTO-SWITCHING: "2D/3D Auto-Switching"
   }
 
+  // For $nav-mode output.
   static FIX-NO-FIX ::= 1
   static FIX-2D-FIX ::= 2
   static FIX-3D-FIX ::= 3
@@ -535,11 +575,13 @@ class Gsa extends NmeaMessage:
     FIX-3D-FIX: "3D Fix"
   }
 
+  static SYSTEM-ID-UNSPECIFIED ::= 0
   static SYSTEM-ID-GPS ::= 1
   static SYSTEM-ID-SBAS ::= 2
   static SYSTEM-ID-GLONASS ::= 3
   static SYSTEM-ID-QZSS ::= 4
   static SYSTEM-LOOKUP ::= {
+    SYSTEM-ID-UNSPECIFIED: "UNSPECIFIED",
     SYSTEM-ID-GPS: "GPS",
     SYSTEM-ID-SBAS: "SBAS",
     SYSTEM-ID-GLONASS: "GLONASS",
@@ -552,8 +594,11 @@ class Gsa extends NmeaMessage:
   operation-mode -> string:
     return payload[1]
 
-  system-id -> int:
-    return int.parse payload[18]
+  nav-mode -> int:
+    return int.parse payload[2]
+
+  system-id -> int?:
+    return int.parse payload[18] --if-error=: return SYSTEM-ID-UNSPECIFIED
 
   p-dop -> float:
     return float.parse payload[15]
@@ -579,22 +624,12 @@ GSV: GNSS Satellites in View
 
 GSV is not the collection of satellites that are actually used in the math, but
   rather all the satellites that can be heard in RF frequencies.  (See GSA type
-  messages for satellites in use/contributing toward position.)
+  messages for satellites in use/contributing toward position.)  System is given
+  in the talker type, not as a field in the message.
 */
 class Gsv extends NmeaMessage:
   static ID ::= NmeaParser.GSV
   talker/string := ?
-
-  static SYSTEM-ID-GPS ::= 1
-  static SYSTEM-ID-SBAS ::= 2
-  static SYSTEM-ID-GLONASS ::= 3
-  static SYSTEM-ID-QZSS ::= 4
-  static SYSTEM-LOOKUP ::= {
-    SYSTEM-ID-GPS: "GPS",
-    SYSTEM-ID-SBAS: "SBAS",
-    SYSTEM-ID-GLONASS: "GLONASS",
-    SYSTEM-ID-QZSS: "QZSS"
-  }
 
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
@@ -605,8 +640,30 @@ class Gsv extends NmeaMessage:
   message-part -> List:
     return [int.parse payload[2], int.parse payload[1]]
 
-  system-id -> int:
-    return int.parse payload[18]
+  /** Number of SVs in this message. */
+  num-svs -> int:
+    return (payload.size - 4) / 4
+
+  /** Number of SVs for this talker (across all messages). */
+  total-svs -> int:
+    return int.parse payload[3]
+
+  /**
+  The SV's in this message.
+
+  Returns a map with the PRN as key, and [Elevation, Azimuth, SNR] as data.
+  */
+  svs -> Map:
+    out-map := {:}
+    num-svs.repeat:
+      num := 4 + (it * 4)
+      prn := int.parse payload[num]
+      elev := float.parse payload[num + 1] --if-error=(: null)
+      az := float.parse payload[num + 2] --if-error=(: null)
+      snr := float.parse payload[num + 3] --if-error=(: null)
+      out-map[prn] = [elev, az, snr]
+    return out-map
 
   stringify -> string:
-    return  "$super: $SYSTEM-LOOKUP[system-id]:$message-part "
+    sv-set := svs.keys.join ","
+    return  "$super: $NmeaParser.TALKER-LOOKUP_[talker]:$message-part ($sv-set)"

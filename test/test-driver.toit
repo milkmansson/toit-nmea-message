@@ -82,17 +82,15 @@ class Driver:
 
     adapter_ = Adapter_ reader writer logger parser
 
-    // Start message receiver task (and wait for it to start).
     run
 
 
   /**
   Starts the message receiver task.
 
-  The $run command returns only when the task has started.  This ensures the
-    message receiver is ready before any messages are sent that would otherwise
-    cause code to block permanently without the corresponding ACK/NAK being
-    received.
+  Does not return until the task has started, preventing further code execution
+    until recieved messages are guaranteed to be seen.  (If this does not wait,
+    first incoming messages may be missed in the few msec the task is starting.)
   */
   run -> none:
     assert: not runner_
@@ -114,14 +112,6 @@ class Driver:
 
   /**
   Resets the driver.
-
-  Reset should be called when the message receiver is not actively running,
-    otherwise some messages will be lost.  (Losing a message may or may not be
-    a problem depending on the use case.)
-
-  Set $mode to 1 (default) "Controlled Software Reset" restart the software
-    but fix and satellite information is not lost. Set $mode to 4 for a hardware
-    restart via watchdog after a shutdown (loses fix and tracking information).
   */
   reset --mode/int=1 -> none:
     logger_.debug "sending reset message (type $mode)"
@@ -145,48 +135,10 @@ class Driver:
 
 
   /** Send a user created message to the device, for debug purposes. */
-  send-raw-message message/any -> none:
+  send-message message/any -> none:
     logger_.debug "SEND  <-" --tags={"message" : message}
     command-mutex_.do:
       adapter_.send-packet message.to-byte-array
-
-  /**
-  Sends message, and waits for the response.
-
-  Handles logic of success and failure messages, while not blocking other
-    message traffic being handled by the driver.  Note that new/custom message
-    types being sent may require latch handling to avoid always being handled
-    via the $COMMAND-TIMEOUT_ timeout path, and to catch the relevant message
-    that matches the command.
-  */
-  send-message message/any --return-immediately/bool=false -> none:
-    response := message
-    command-mutex_.do:
-      if return-immediately:
-        logger_.debug "SEND  <-" --tags={"message" : message}
-        adapter_.send-packet message.to-byte-array
-        return //null
-
-      // todo: try/finally.
-      // todo: determine if/how we should convert to semphore.
-      duration := Duration.ZERO
-      logger_.debug "SEND  <-" --tags={"message" : message}
-      exception := catch:
-        with-timeout COMMAND-TIMEOUT_:
-          duration = Duration.of:
-            adapter_.send-packet message.to-byte-array
-
-
-      // Sleep a moment
-      sleep --ms=50
-
-      if exception:
-        logger_.error "Command timed out. " --tags={"message":"$(message)", "ms":duration.in-ms}
-        return  //null
-
-    // Lets have the return message supplied back to the caller to determine
-    // what to do with it.
-    return  //response
 
 
 class Adapter_:
@@ -210,10 +162,6 @@ class Adapter_:
 
   reset --mode/int=1 -> none:
     wait-until-receiver-available_
-    // Reset and reload configuration (cold boot + reboot of processes).
-    //send-packet (ubx-message.CfgRst --reset-mode=mode).to-byte-array
-    // Wait for the reload to take effect, before flushing stale data.
-    // This was tested with 10ms, so using 50ms.
     sleep --ms=50
     flush
 
@@ -229,8 +177,7 @@ class Adapter_:
     while true:
       peek ::= reader_.peek-byte 0
 
-      if peek == NMEA-MAGIC-BYTE_: // NMEA protocol
-        //return Nmea-message.from-reader reader_
+      if peek == NMEA-MAGIC-BYTE_:
         e := catch: return parser_.from-reader reader_
         log.warn "error parsing nmea message" --tags={"error": e}
 
@@ -248,24 +195,9 @@ class Adapter_:
           reader_.read
       if e: return
 
-/*
-class gopher_:
-  open/bool           // use in message parser - only do 'gopher processing' if open
-  desired-types/List  // acceptable types as responses (default being ACK/NAK and the request type)
-  maximum-number/int  // in case we are expecting a fixed/max number of response messages
-  maximum-time/Duration    // maximum duration before closing the request
-  maximum-timeout/Duration // maximum duration since last acceptable packet
-  messages/List       // messages collected by the gopher to pass back
-
-  constructor:
-    open = false
-    desired-types = []
-*/
-
-
 /**
-Helper class to create a writer from a $serial.Device. Can be used when connecting
-  to the GNSS chip using I2C or SPI.
+Helper class to create a writer from a $serial.Device. Can be used when
+  connecting to the GNSS chip using I2C or SPI.
 */
 class Writer extends io.Writer:
   device_/serial.Device
@@ -284,8 +216,8 @@ class Writer extends io.Writer:
 
 
 /**
-Helper class to create an $io.Reader from a $serial.Device. Can be used when connecting
-  to the GNSS chip using I2C or SPI.
+Helper class to create an $io.Reader from a $serial.Device. Can be used when
+  connecting to the GNSS chip using I2C or SPI.
 */
 class Reader extends io.Reader:
   static WAIT-BEFORE-NEXT-READ-ATTEMPT_ ::= Duration --ms=5
