@@ -42,6 +42,8 @@ main:
   driver.send-message disable-vtg
   disable-gll := Ubx40.set "GLL" --uart1-rate=0
   driver.send-message disable-gll
+
+  // Allow GGA at default rate to show something is still there
   disable-gga := Ubx40.set "GGA" --uart1-rate=1
   driver.send-message disable-gga
 

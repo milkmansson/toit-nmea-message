@@ -53,10 +53,57 @@ class Ubx00 extends NmeaMessage:
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+    super.private_ talker id payload
 
   is-poll -> bool:
     return payload.size < 3
+
+  time -> Time:
+    return Time.utc
+      //--year=(int.parse payload[4])
+      //--month=(int.parse payload[3])
+      //--day=(int.parse payload[2])
+      --h=(int.parse (payload[2])[0..2])
+      --m=(int.parse (payload[2])[2..4])
+      --s=(int.parse (payload[2])[4..6])
+      --ms=(int.parse (payload[2])[7..])
+
+  latitude -> float:
+    return float.parse payload[3]
+
+  latitude-n -> string:
+    return payload[4]
+
+  longitude -> float:
+    return float.parse payload[5]
+
+  longitude-e -> string:
+    return payload[6]
+
+  altitude -> float:
+    return float.parse payload[7]
+
+  nav-status -> string:
+    return payload[8]
+
+  h-accuracy -> float:
+    return float.parse payload[9]
+
+  v-accuracy -> float:
+    return float.parse payload[10]
+
+  speed-over-ground -> float:
+    return float.parse payload[11] --if-error=: 0.0
+
+  course-over-ground -> float:
+    return float.parse payload[12] --if-error=: 0.0
+
+  vertical-velocity -> float:
+    return float.parse payload[13] --if-error=: 0.0
+
+
+  num-svs -> int:
+    return int.parse payload[18] --if-error=: 0
 
   stringify -> string:
     if is-poll:

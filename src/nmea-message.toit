@@ -665,7 +665,7 @@ class Gsa extends NmeaMessage:
     if payload.size >= 19:
       return int.parse payload[18] --if-error=: SYSTEM-ID-UNSPECIFIED
     else:
-      return SYSTEM-ID-UNSPECIFIED
+      return NmeaParser.TALKER-LOOKUP_[talker]
 
   p-dop -> float:
     return float.parse payload[15]
