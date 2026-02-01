@@ -33,8 +33,13 @@ main:
   driver := Driver port.in port.out nmea-parser
   print "Driver started..."
 
+  print "Sending factory reset..."
+  factory-reset := Cas10.set Cas10.START-FACTORY
+  driver.send-message factory-reset
+  sleep --ms=500
+
   // Leave one going to know that the device is still there...
-  print "Stopping all message types"
+  print "Stopping message noise..."
   types-message := Cas03.set --rmc=9 --gsv=0 --gsa=0 --vtg=0 --zda=0 --txt=0 --gll=0 --gga=0
   driver.send-message types-message
   sleep --ms=250
@@ -75,6 +80,3 @@ main:
 
 //  gga-poll := Gga.poll
 //  driver.send-message gga-poll
-
-//  factory-reset := Cas10.set Cas10.START-FACTORY
-//  driver.send-message poll
