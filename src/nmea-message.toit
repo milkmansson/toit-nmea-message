@@ -419,11 +419,11 @@ class Vtg extends NmeaMessage:
   constructor.private_ .talker/string id/string payload/List:
     super.private_  talker id payload
 
-  true-course -> float:
-    return float.parse payload[1]
+  true-course -> float?:
+    return float.parse payload[1] --if-error=: 0.0
 
   magnetic-course -> float:
-    return float.parse payload[3]
+    return float.parse payload[3] --if-error=: 0.0
 
   speed-kmh -> float:
     //print "KMH PARSING $payload"
@@ -662,7 +662,10 @@ class Gsa extends NmeaMessage:
     return int.parse payload[2]
 
   system-id -> int?:
-    return int.parse payload[18] --if-error=: return SYSTEM-ID-UNSPECIFIED
+    if payload.size >= 19:
+      return int.parse payload[18] --if-error=: SYSTEM-ID-UNSPECIFIED
+    else:
+      return SYSTEM-ID-UNSPECIFIED
 
   p-dop -> float:
     return float.parse payload[15]

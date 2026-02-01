@@ -3,9 +3,7 @@
 // in the LICENSE file.
 
 import gpio
-import i2c
 import uart
-import io
 
 import .driver show *
 import nmea-message show *
@@ -16,6 +14,19 @@ RX-PIN := gpio.Pin 6
 BAUD   := 9600
 //BAUD   := 38400
 //BAUD   := 115200
+
+/*
+Text output for the readme:
+
+[nmea-driver] DEBUG: SEND  <- {message: $PCAS10,3*1F}
+[nmea-driver] DEBUG: RECV  -> {message: NMEA-GP-TXT: Notice|MA=CASIC}
+[nmea-driver] DEBUG: RECV  -> {message: NMEA-GP-TXT: Notice|IC=AT6558F-5N-32-1C580900}
+[nmea-driver] DEBUG: RECV  -> {message: NMEA-GP-TXT: Notice|SW=URANUS5}
+[nmea-driver] DEBUG: RECV  -> {message: NMEA-GP-TXT: Notice|TB=2020-03-26}
+[nmea-driver] DEBUG: RECV  -> {message: NMEA-GP-TXT: Notice|MO=GB}
+
+*/
+
 
 main:
   // Assemble parser.
