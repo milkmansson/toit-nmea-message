@@ -184,19 +184,18 @@ class Adapter_:
       peek2 ::= reader_.peek-bytes 2
       peek1 ::= peek2[0]
 
+      // Alert if NMEA tests result in the receiver sending binary protocol frames.
       if peek2 == CASIC-MAGIC-BYTE_:
-        log.warn "got a CASIC frame (ignoring)"
+        logger_.warn "got a CASIC frame (ignoring)"
       if peek2 == UBX-MAGIC-BYTE_:
-        log.warn "got a UBX frame (ignoring)"
+        logger_.warn "got a UBX frame (ignoring)"
 
       if peek1 == NMEA-MAGIC-BYTE_:
         e := catch: return parser_.from-reader reader_
-        log.warn "error parsing nmea message" --tags={"error": e}
+        logger_.warn "error parsing nmea message" --tags={"error": e}
 
       // Go to next byte.
       reader_.skip 1
-      //print "skipped a byte"
-
 
   /**
   Blocks until something comes from the device.
