@@ -156,7 +156,7 @@ class NmeaParser:
       if registry.contains id2:
         return registry[id2].call talker id2 (sentence[1..end].split DELIMITER_)
 
-      throw "Unknown proprietary message type '\$P$id' or '\$P$id2'"
+      throw "Unknown proprietary message type '$id' or '$id2'"
 
     else:
       // Message must be an NMEA native message:
@@ -172,6 +172,7 @@ class NmeaParser:
   static is-valid-sentence_ sentence/string -> bool:
     // Check the payload length.
     if sentence.size > MAX-MESSAGE-SIZE_:
+      print "message too long"
       return false
       //throw "$INVALID-NMEA-MESSAGE_: invalid size"
 
@@ -240,8 +241,8 @@ abstract class NmeaMessage:
   to-string -> string:
     outstring := payload.join ","
     checksum := NmeaParser.compute-checksum_ outstring
-    checksum-string := "$(%02x checksum)"
-    return "\$$outstring*$checksum-string\r\n"
+    checksum-string := "$(%02x checksum)".to-ascii-upper
+    return "\$$outstring*$checksum-string"
 
 class Txt extends NmeaMessage:
   static ID ::= NmeaParser.TXT
@@ -344,6 +345,8 @@ class Gga extends NmeaMessage:
     return payload[12]
 
   stringify -> string:
+    if not is-fix-valid:
+      return  "$super: fix:$QUALITY-LOOKUP_[fix-quality]"
     return  "$super: lat:$latitude($latitude-n)|long:$longitude($longitude-e)"
 
 /**
@@ -388,6 +391,21 @@ class Vtg extends NmeaMessage:
   static ID ::= NmeaParser.VTG
   talker/string := ?
 
+  static POS-MODE-AUTONOMOUS ::= "A"
+  static POS-MODE-ESTIMATION ::= "E"
+  static POS-MODE-INVALID-DATA ::= "N"
+  static POS-MODE-DIFFERENTIAL ::= "D"
+  static POS-MODE-MANUAL ::= "M"
+  static POS-MODE-SIMULATOR ::= "S"
+  static POS-MODE-LOOKUP_ ::= {
+    POS-MODE-AUTONOMOUS: "Autonomous",
+    POS-MODE-ESTIMATION: "Estimation",
+    POS-MODE-INVALID-DATA: "Invalid Data",
+    POS-MODE-DIFFERENTIAL: "Differential",
+    POS-MODE-SIMULATOR: "Simulator",
+    POS-MODE-MANUAL: "Manual"
+  }
+
   constructor.poll:
     talker = NmeaParser.GPS
     msgid := NmeaParser.QUERY
@@ -404,17 +422,19 @@ class Vtg extends NmeaMessage:
 
   speed-kmh -> float:
     //print "KMH PARSING $payload"
-    return float.parse payload[7]
+    return float.parse payload[7] --if-error=: 0.0
 
   speed-kts -> float:
     //print "KMH PARSING $payload[7]"
-    return float.parse payload[5]
+    return float.parse payload[5] --if-error=: 0.0
 
   positioning-mode -> string:
     return payload[9]
 
   stringify -> string:
-    return  "$super: kmh:$(%0.0f speed-kmh)|kts:$(%0.0f speed-kts)|mode:$positioning-mode|course:$(%0.3f true-course)"
+    if positioning-mode == POS-MODE-INVALID-DATA or positioning-mode == POS-MODE-MANUAL:
+      return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]"
+    return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]|kmh:$(%0.0f speed-kmh)|kts:$(%0.0f speed-kts)|course:$(%0.3f true-course)"
 
 class Rmc extends NmeaMessage:
   static ID ::= NmeaParser.RMC
@@ -431,11 +451,15 @@ class Rmc extends NmeaMessage:
   static POS-MODE-ESTIMATION ::= "E"
   static POS-MODE-INVALID-DATA ::= "N"
   static POS-MODE-DIFFERENTIAL ::= "D"
+  static POS-MODE-MANUAL ::= "M"
+  static POS-MODE-SIMULATOR ::= "S"
   static POS-MODE-LOOKUP_ ::= {
     POS-MODE-AUTONOMOUS: "Autonomous",
     POS-MODE-ESTIMATION: "Estimation",
     POS-MODE-INVALID-DATA: "Invalid Data",
-    POS-MODE-DIFFERENTIAL: "Differential"
+    POS-MODE-DIFFERENTIAL: "Differential",
+    POS-MODE-SIMULATOR: "Simulator",
+    POS-MODE-MANUAL: "Manual"
   }
 
   constructor.poll:
@@ -465,7 +489,7 @@ class Rmc extends NmeaMessage:
     return payload[6]
 
   speed-kts -> float:
-    return float.parse payload[7]
+    return float.parse payload[7] //--if-error=: 0.0
 
   /** Course Over Ground. */
   course -> float:
@@ -652,7 +676,9 @@ class Gsa extends NmeaMessage:
     return payload[3..end]
 
   stringify -> string:
-    return  "$super: $SYSTEM-LOOKUP[system-id]:$satellites"
+    sats/List := satellites.copy
+    sats.remove --all ""
+    return  "$super: $SYSTEM-LOOKUP[system-id]:$sats"
 
 /**
 GSV: GNSS Satellites in View

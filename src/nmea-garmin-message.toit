@@ -26,14 +26,14 @@ class NmeaGarminParser:
 
 
 /**
-PSRF151: Navigation Parameters (Position/velocity/fix).
+GRMF:  Position/navigation solution.
 */
 class Grmf extends NmeaMessage:
   static ID ::= NmeaGarminParser.GRMF
   talker/string := NmeaGarminParser.PROPRIETARY
 
   constructor:
-    super.private_ talker ID ["\$$talker","$ID"]
+    super.private_ talker ID ["$talker$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -41,14 +41,14 @@ class Grmf extends NmeaMessage:
 
 
 /**
-PSRF154: Time & date information.
+GRME: Time/clock information.
 */
 class Grme extends NmeaMessage:
   static ID ::= NmeaGarminParser.GRME
   talker/string := NmeaGarminParser.PROPRIETARY
 
   constructor:
-    super.private_ talker ID ["\$$talker","$ID"]
+    super.private_ talker ID ["$talker$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:

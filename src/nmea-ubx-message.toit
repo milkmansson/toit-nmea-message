@@ -36,7 +36,7 @@ class Ubx00 extends NmeaMessage:
   talker/string := NmeaUbxParser.PROPRIETARY
 
   constructor:
-    super.private_ talker ID ["\$$talker","$ID"]
+    super.private_ talker ID ["$(talker)UBX","$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -55,7 +55,7 @@ class Ubx04 extends NmeaMessage:
   talker/string := NmeaUbxParser.PROPRIETARY
 
   constructor:
-    super.private_ talker ID ["\$$talker","$ID"]
+    super.private_ talker ID ["$(talker)UBX","$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:

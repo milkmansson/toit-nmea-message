@@ -64,7 +64,7 @@ class Cas00 extends NmeaMessage:
   talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["\$$talker$ID"]
+    super.private_ talker ID ["$talker$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -91,9 +91,9 @@ class Cas01 extends NmeaMessage:
     BAUD-57600: 57600,
     BAUD-115200: 115200 }
 
-  constructor --baudrate/int:
+  constructor.set baudrate/int:
     assert: BAUD-LOOKUP_.contains baudrate
-    super.private_ talker ID ["\$$talker$ID", baudrate]
+    super.private_ talker ID ["$talker$ID", baudrate]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -120,9 +120,9 @@ class Cas02 extends NmeaMessage:
     OUTPUT-5HZ: 5.0,
     OUTPUT-10HZ: 10.0}
 
-  constructor rate/int:
+  constructor.set rate/int:
     assert: OUTPUT-RATE-LOOKUP_.contains rate
-    super.private_ talker ID ["\$$talker$ID", rate]
+    super.private_ talker ID ["$talker$ID", rate]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -140,6 +140,10 @@ Values set against the sentence types control how many ticks of Cas02 happen for
 Some devices only support 0 and 1 (0 = disable).  Other devices allow higher
   numbers allowing for fewer of specific message types to be sent.  Additionally
   later softwares have additional fields.  (These are shown in the Toitdocs.)
+
+Message type supports v3.6 or v4.2 specification. Simply specifying any of the
+  v4.2 fields (DHV, LPS, UTC, GST, or TIM) will create the message in v4.2
+  format.
 */
 class Cas03 extends NmeaMessage:
   static ID ::= NmeaCasicParser.CAS03
@@ -155,7 +159,7 @@ class Cas03 extends NmeaMessage:
   static TYPE-RMC ::= 5
   static TYPE-VTG ::= 6
   static TYPE-ZDA ::= 7
-  static TYPE-ANT ::= 8
+  static TYPE-TXT ::= 8
 
   // Additional fields for v4.2 specification
   static TYPE-DHV ::= 9
@@ -172,7 +176,7 @@ class Cas03 extends NmeaMessage:
     TYPE-RMC: "RMC",
     TYPE-VTG: "VTG",
     TYPE-ZDA: "ZDA",
-    TYPE-ANT: "ANT",
+    TYPE-TXT: "TXT",
     TYPE-DHV: "DHV",
     TYPE-LPS: "LPS",
     TYPE-UTC: "UTC",
@@ -180,7 +184,7 @@ class Cas03 extends NmeaMessage:
     TYPE-TIM: "TIM",
   }
 
-  constructor.poll
+  constructor.set
       --gga/int?=null
       --gll/int?=null
       --gsa/int?=null
@@ -188,7 +192,7 @@ class Cas03 extends NmeaMessage:
       --rmc/int?=null
       --vtg/int?=null
       --zda/int?=null
-      --ant/int?=null
+      --txt/int?=null
 
       --dhv/int?=null
       --lps/int?=null
@@ -199,7 +203,7 @@ class Cas03 extends NmeaMessage:
     if dhv or lps or utc or gst or tim:
       payload-size = PAYLOAD-SIZE-EXTENDED_
     super.private_ talker ID (List payload-size)
-    payload[0] = "\$$talker$ID"
+    payload[0] = "$talker$ID"
     payload[TYPE-GGA] = gga ? gga : ""
     payload[TYPE-GLL] = gll ? gll : ""
     payload[TYPE-GSA] = gsa ? gsa : ""
@@ -207,7 +211,7 @@ class Cas03 extends NmeaMessage:
     payload[TYPE-RMC] = rmc ? rmc : ""
     payload[TYPE-VTG] = vtg ? vtg : ""
     payload[TYPE-ZDA] = zda ? zda : ""
-    payload[TYPE-ANT] = ant ? ant : ""
+    payload[TYPE-TXT] = txt ? txt : ""
 
     if payload.size == PAYLOAD-SIZE-EXTENDED_:
       payload[TYPE-DHV] = dhv ? dhv : ""
@@ -227,7 +231,7 @@ class Cas03 extends NmeaMessage:
   rmc-rate -> int: return payload[TYPE-RMC]
   vtg-rate -> int: return payload[TYPE-VTG]
   zda-rate -> int: return payload[TYPE-ZDA]
-  ant-rate -> int: return payload[TYPE-ANT]
+  ant-rate -> int: return payload[TYPE-TXT]
   dhv-rate -> int?: return is-extended ? payload[TYPE-DHV] : ""
   lps-rate -> int?: return is-extended ? payload[TYPE-LPS] : ""
   utc-rate -> int?: return is-extended ? payload[TYPE-UTC] : ""
@@ -268,9 +272,9 @@ class Cas04 extends NmeaMessage:
     QZSS: "QZSS"
     }
 
-  constructor --mask/int:
+  constructor.set --mask/int:
     assert: 0 <= mask <= 31
-    super.private_ talker ID ["\$$talker$ID", mask]
+    super.private_ talker ID ["$talker$ID", mask]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -283,7 +287,7 @@ class Cas04 extends NmeaMessage:
     return (payload[1] & BDS) != 0
 
   is-glonass-enabled -> bool:
-    return (payload[1] & BDS) != 0
+    return (payload[1] & GLONASS) != 0
 
   stringify -> string:
     out-list := []
@@ -318,9 +322,9 @@ class Cas05 extends NmeaMessage:
     LEGACY-GPS-ONLY: "GPS Only"
     }
 
-  constructor --mode/int:
+  constructor.set --mode/int:
     assert: MODE-LOOKUP_.contains mode
-    super.private_ talker ID ["\$$talker$ID", mode]
+    super.private_ talker ID ["$talker$ID", mode]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -356,9 +360,14 @@ class Cas06 extends NmeaMessage:
     INFO-CUSTOMER: "Customer",
     INFO-UPGRADE-CODE: "Upgrade"}
 
-  constructor --info-type/int:
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := NmeaParser.QUERY
+    super.private_  talker msgid ["$talker$msgid",ID]
+
+  constructor.set info-type/int:
     assert: INFO-LOOKUP_.contains info-type
-    super.private_ talker ID ["\$$talker$ID", info-type]
+    super.private_ talker ID ["$talker$ID", info-type]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -391,9 +400,9 @@ class Cas10 extends NmeaMessage:
     DISABLE-SERIAL: "Disable Serial",
     ENABLE-SERIAL: "Enable Serial"}
 
-  constructor --start-type/int:
+  constructor.set start-type/int:
     assert: START-LOOKUP_.contains start-type
-    super.private_ talker ID ["\$$talker$ID", start-type]
+    super.private_ talker ID ["$talker$ID", start-type]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -414,9 +423,9 @@ class Cas12 extends NmeaMessage:
   static ID ::= NmeaCasicParser.CAS12
   talker/string := "P"
 
-  constructor --seconds/int:
+  constructor.poll --seconds/int:
     assert: 0 < seconds <= 65535
-    super.private_ talker ID ["\$$talker$ID", "$seconds"]
+    super.private_ talker ID ["$talker$ID", "$seconds"]
 
   seconds -> int:
     return int.parse payload[1]

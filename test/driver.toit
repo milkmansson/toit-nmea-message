@@ -80,10 +80,9 @@ class Driver:
     if writer is not io.Writer:
       writer = io.Writer.adapt writer
 
-    adapter_ = Adapter_ reader writer logger parser
+    adapter_ = Adapter_ reader writer parser logger_
 
     run
-
 
   /**
   Starts the message receiver task.
@@ -128,11 +127,10 @@ class Driver:
 
 
   /** Send a raw byte array to the device, for debug purposes. */
-  send-raw-byte-array bytes/ByteArray -> none:
+  send-byte-array bytes/ByteArray -> none:
     logger_.debug "SEND  <-" --tags={"bytes" : bytes}
     command-mutex_.do:
       adapter_.send-packet bytes
-
 
   /** Send a user created message to the device, for debug purposes. */
   send-message message/any -> none:
@@ -152,7 +150,8 @@ class Adapter_:
   static STREAM-DELAY_ ::= Duration --ms=1
 
   // Hardcode these here for now:
-  static UBX-MAGIC-BYTE_ ::= 0xb5
+  static CASIC-MAGIC-BYTE_ ::= [0xba,0xce]
+  static UBX-MAGIC-BYTE_ ::= [0xb5,0x62]
   static NMEA-MAGIC-BYTE_ ::= 0x24
   static AIS-MAGIC-BYTE_ ::= 0x21
 
@@ -161,45 +160,62 @@ class Adapter_:
   writer_/io.Writer
   parser_/nmea-message.NmeaParser
 
-  constructor .reader_ .writer_ .logger_ .parser_:
-
-  flush -> none:
-    // Flush all data up to this point.
-    wait-until-receiver-available_
+  constructor .reader_ .writer_ .parser_ logger/log.Logger=log.default:
+    logger_ = logger.with-name "adapter"
 
   reset --mode/int=1 -> none:
-    wait-until-receiver-available_
+    wait-until-receiver-available_ --timeout=(Duration --s=3)
     sleep --ms=50
     flush
 
+  /** Send bytes, as is. */
   send-packet bytes/ByteArray -> none:
     writer_.write bytes
     sleep STREAM-DELAY_
 
-  send-sentence message/string -> none:
-    writer_.write message
-    sleep STREAM-DELAY_
-
-  send-message message/any -> none:
-    writer_.write message.to-byte-array
+  /** Send string, with optional CRLF. */
+  send-message message/any --crlf=true -> none:
+    writer_.write (message.to-byte-array)
+    if crlf: writer_.write #[0x0d, 0x0a]
     sleep STREAM-DELAY_
 
   next-message -> any: //ubx-message.Message:
     while true:
-      peek ::= reader_.peek-byte 0
+      peek2 ::= reader_.peek-bytes 2
+      peek1 ::= peek2[0]
 
-      if peek == NMEA-MAGIC-BYTE_:
+      if peek2 == CASIC-MAGIC-BYTE_:
+        log.warn "got a CASIC frame (ignoring)"
+      if peek2 == UBX-MAGIC-BYTE_:
+        log.warn "got a UBX frame (ignoring)"
+
+      if peek1 == NMEA-MAGIC-BYTE_:
         e := catch: return parser_.from-reader reader_
         log.warn "error parsing nmea message" --tags={"error": e}
 
       // Go to next byte.
       reader_.skip 1
+      //print "skipped a byte"
 
-  wait-until-receiver-available_:
-    // Block until we can read from the device.
-    first ::= reader_.read
 
-    // Consume all data from the device before continuing (without blocking).
+  /**
+  Blocks until something comes from the device.
+
+  Timeout after 2 seconds in case device is currently silent.
+  */
+  wait-until-receiver-available_ --timeout/Duration=(Duration --s=2) -> bool:
+    exception := catch:
+      with-timeout timeout:
+        first ::= reader_.read
+    if exception:
+      logger_.error "block until read timed out"
+      return false
+    return true
+
+  /**
+  Consumes all data from the device before continuing (without blocking).
+  */
+  flush -> none:
     while true:
       e := catch:
         with-timeout --ms=0:
