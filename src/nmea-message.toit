@@ -234,8 +234,13 @@ abstract class NmeaMessage:
   stringify -> string:
     return "NMEA-$talker-$id"
 
+  /** Full Message Name. */
   full-name -> string:
     return "NMEA-$talker-$id"
+
+  /** Provides access to raw data in all fields (parsed or not). */
+  raw -> List:
+    return payload
 
   /** Used to create the ASCII sentence for sending on the wire. */
   to-string -> string:
