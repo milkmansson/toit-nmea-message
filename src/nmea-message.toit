@@ -112,27 +112,28 @@ class NmeaParser:
 
     // Type-1 message IDs - types (Casic, Garmin) whose message IDs are held in
     // the first field only. (eg, Message ID definition goes to first comma.)
-    type-1/string := sentence[1..first-comma]
-    // Type-2 message IDs - types (uBlox, SiRF) whose message ID also uses the
-    // next field. (eg, Message ID definition goes to second comma.)
-    type-2/string := sentence[1..second-comma]
+    type/string := sentence[1..first-comma]
 
     talker/string := ?
     id/string := ?
-    if type-1[0] == 'P':
+    if type[0] == 'P':
       // Type 1 Message handling:
       talker = "P"
-      id = type-1[1..]
+      id = type[1..]
       if registry_.contains id:
         return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
 
-      // Message is a P, but must be type 2: message ID information goes to second comma.
+      // Message is a P, but must be type 2: message ID information goes to
+      // second comma. Type-2 message IDs (eg uBlox, SiRF) have message IDs
+      // that also use the next field. (eg, Message ID definition goes to second
+      // comma.)
+      type = sentence[1..second-comma]
 
-      id2 := type-2[1..]
-      if registry_.contains id2:
-        return registry_[id2].call talker id2 (sentence[1..end].split DELIMITER_)
+      id = type[1..]
+      if registry_.contains id:
+        return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
 
-      throw "Unknown proprietary message type '$id' or '$id2'"
+      throw "Unknown proprietary message type '$id'"
 
     else:
       // Message must be an NMEA native message:
