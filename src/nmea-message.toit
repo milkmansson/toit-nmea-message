@@ -162,7 +162,7 @@ class NmeaParser:
     message := sentence[1..cs-delimiter]
     checksum := int.parse (sentence[(cs-delimiter+1)..])  --radix=16
 
-    return (compute-checksum_ message) == checksum:
+    return (compute-checksum_ message) == checksum
 
   /**
   NMEA checksum is XOR of all characters between $ and * (exclusive).
