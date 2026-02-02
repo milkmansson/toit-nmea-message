@@ -22,14 +22,13 @@ PSRF151: Navigation Parameters (Position/velocity/fix).
 */
 class Srf151 extends NmeaMessage:
   static ID ::= "SRF151"
-  talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["$(talker)$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    super.private_  "P" ID payload
 
 
 /**
@@ -37,11 +36,11 @@ PSRF154: Time & date information.
 */
 class Srf154 extends NmeaMessage:
   static ID ::= "SRF154"
-  talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["$(talker)$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    // NOTE: SRF proprietary messages always use talker "P".  Ignored by design.
+    super.private_  "P" ID payload
