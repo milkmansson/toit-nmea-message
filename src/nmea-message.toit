@@ -137,8 +137,8 @@ class NmeaParser:
 
     else:
       // Message must be an NMEA native message:
-      talker = type-1[0..2]
-      id = type-1[2..]
+      talker = type[0..2]
+      id = type[2..]
 
       if registry_.contains id:
         return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
@@ -368,6 +368,7 @@ class Zda extends NmeaMessage:
     //print "parsing '$payload[6]'"
     return int.parse payload[6]
 
+  /** Time provided by GNSS. */
   time -> Time:
     return Time.utc
       --year=(int.parse payload[4])
@@ -866,6 +867,11 @@ class Gbs extends NmeaMessage:
   constructor.private_ .talker/string id/string payload/List:
     super.private_ talker id payload
 
+  /**
+  Time for use as a comparative reference to other messages.
+
+  Time misses date, and therefore is not absolute.  Use RMC or ZDA for this.
+  */
   time -> Time:
     return Time.epoch
       --h=(int.parse (payload[1])[0..2])

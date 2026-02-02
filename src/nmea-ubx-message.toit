@@ -62,6 +62,11 @@ class Ubx00 extends NmeaMessage:
   is-poll -> bool:
     return payload.size < 3
 
+  /**
+  Time for use as a comparative reference to other messages.
+
+  Time misses date, and therefore is not absolute.  Use RMC or ZDA for this.
+  */
   time -> Time:
     return Time.epoch
       --h=(int.parse (payload[2])[0..2])
