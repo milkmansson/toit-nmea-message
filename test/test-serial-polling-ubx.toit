@@ -21,7 +21,7 @@ main:
   print "Base NmeaMessage count:  $nmea-parser.message-count"
 
   // Add Casic elements to NMEA parser/registry.
-  nmea-parser.add NmeaUbxParser.messages
+  nmea-parser.add NmeaUbxParser.MESSAGES
   print "+Ubx message count:    $nmea-parser.message-count"
 
   // Open serial communication and start driver.

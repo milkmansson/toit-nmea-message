@@ -37,6 +37,16 @@ class Ubx00 extends NmeaMessage:
   static STATUS-DIFFERENTIAL-3D ::= "D3"
   static STATUS-COMBINED-GPS-DR ::= "RK"
   static STATUS-TIME-ONLY ::= "TT"
+  static STATUS-LOOKUP_ ::= {
+    STATUS-NO-FIX: "No Fix",
+    STATUS-DEAD-RECKONING: "Dead Reckoning",
+    STATUS-STANDALONE-2D: "Standalone 2D",
+    STATUS-STANDALONE-3D: "Standalone 3D",
+    STATUS-DIFFERENTIAL-2D: "Differential 2D",
+    STATUS-DIFFERENTIAL-3D: "Differential 3D",
+    STATUS-COMBINED-GPS-DR: "Combined GPS Dead Reckoning",
+    STATUS-TIME-ONLY: "Time Only",
+  }
 
   /** Message content asks the receiver for a UBX00 with data. */
   constructor.poll:
