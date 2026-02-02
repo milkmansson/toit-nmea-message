@@ -81,8 +81,8 @@ class NmeaParser:
     Gbs.ID: :: | talker id payload | Gbs.private_ talker id payload,
   }
 
-  constructor --proprietary-messages/Map:
-    add proprietary-messages
+  constructor --proprietary-messages/Map?:
+    if proprietary-messages: add proprietary-messages
 
   from-reader io-reader/io.Reader -> NmeaMessage:
     if (io-reader.peek-byte 0) != NMEA-MAGIC-BYTE_:
