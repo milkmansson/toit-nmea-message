@@ -14,8 +14,8 @@ Garmin receivers using the NMEA Protocol support proprietary NMEA messages,
 
 class NmeaGarminParser:
   static MESSAGES/Map := {
-    Grmf.ID: :: | talker id payload | Grmf.private_ talker id payload,
-    Grme.ID: :: | talker id payload | Grme.private_ talker id payload,
+    "P$Grmf.ID": :: | talker id payload | Grmf.private_ talker id payload,
+    "P$Grme.ID": :: | talker id payload | Grme.private_ talker id payload,
   }
 
 /**
