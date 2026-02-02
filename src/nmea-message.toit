@@ -67,9 +67,6 @@ class NmeaParser:
   static INS ::= "INS" // Inertial Navigation System (INS) information.
   */
 
-  // Query
-  static QUERY ::= "Q"
-
   // Type Registry:
   registry_/Map := {
     Rmc.ID: :: | talker id payload | Rmc.private_ talker id payload,
@@ -81,6 +78,7 @@ class NmeaParser:
     Zda.ID: :: | talker id payload | Zda.private_ talker id payload,
     Gll.ID: :: | talker id payload | Gll.private_ talker id payload,
     Gns.ID: :: | talker id payload | Gns.private_ talker id payload,
+    Gbs.ID: :: | talker id payload | Gbs.private_ talker id payload,
   }
 
   constructor --proprietary-messages/Map:
@@ -297,7 +295,7 @@ class Gga extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -356,7 +354,7 @@ class Zda extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -406,7 +404,7 @@ class Vtg extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -465,7 +463,7 @@ class Rmc extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -564,7 +562,7 @@ class Gll extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -648,7 +646,7 @@ class Gsa extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -704,7 +702,7 @@ class Gsv extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -776,7 +774,7 @@ class Gns extends NmeaMessage:
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_ talker msgid ["$talker$msgid",ID]
 
   constructor.private_ .talker/string id/string payload/List:
@@ -837,3 +835,94 @@ class Gns extends NmeaMessage:
     if not is-fix-valid:
       return  "$super: fix:$QUALITY-LOOKUP_[fix-quality]"
     return  "$super: lat:$latitude($latitude-n)|long:$longitude($longitude-e)"
+
+
+/**
+GBS: Receiver Autonomous Integrity Monitoring Algorithm (RAIM) results.
+
+The fields $err-latitude, errLon and errAlt output the standard deviation of the
+  position calculation, using all satellites which pass the RAIM test successfully.
+
+The fields $err-latitude, errLon and errAlt are only output if the RAIM process passed
+  successfully (i.e. no or successful edits happened). These fields are never
+  output if 4 or fewer satellites are used for the navigation calculation
+  (because, in such cases, integrity can not be determined by the receiver
+  autonomously).
+
+The fields prob, bias and stdev are only output if at least one satellite
+  failed in the RAIM test. If more than one satellites fail the RAIM test, only
+  the information for the worst satellite is output in this message.
+*/
+class Gbs extends NmeaMessage:
+  static ID ::= "GBS"
+  talker/string := ?
+
+  constructor.poll:
+    talker = NmeaParser.GPS
+    msgid := "Q"
+    super.private_ talker msgid ["$talker$msgid",ID]
+
+  constructor.private_ .talker/string id/string payload/List:
+    super.private_ talker id payload
+
+  time -> Time:
+    return Time.epoch
+      --h=(int.parse (payload[1])[0..2])
+      --m=(int.parse (payload[1])[2..4])
+      --s=(int.parse (payload[1])[4..6])
+      --ms=(int.parse (payload[1])[7..])
+
+  /**
+  Expected error in latitude (in meters).
+
+  null if RAIM failed.
+  */
+  err-latitude -> float?:
+    return float.parse payload[2] --if-error=: null
+
+  /**
+  Expected error in longitude (in meters).
+
+  null if RAIM failed.
+  */
+  err-longitude -> float?:
+    return float.parse payload[3] --if-error=: null
+
+  /**
+  Expected error in altitude (in meters).
+
+  null if RAIM failed.
+  */
+  err-altitude -> float?:
+    return float.parse payload[4] --if-error=: null
+
+  /**
+  SVID of most likely failed satellite.
+
+  null if no satellites failed in RAIM test.
+  */
+  svid -> int?:
+    return int.parse payload[5] --if-error=: null
+
+  /**
+  Probability of missed detection.
+
+  Null if RAIM passed, or unsupported.
+  */
+  probability -> float?:
+    return float.parse payload[6] --if-error=: null
+
+  /**
+  Estimate on most likely failed satellite (a priori residual).
+
+  Null if RAIM passed, or unsupported.
+  */
+  bias -> float?:
+    return float.parse payload[7] --if-error=: null
+
+  /** Standard deviation (in meters).
+
+  null if RAIM passed, or unsupported.
+  */
+  standard-deviation -> float?:
+    return float.parse payload[8] --if-error=: null

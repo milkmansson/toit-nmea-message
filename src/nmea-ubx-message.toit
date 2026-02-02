@@ -62,17 +62,12 @@ class Ubx00 extends NmeaMessage:
   is-poll -> bool:
     return payload.size < 3
 
-  /*
   time -> Time:
-    return Time.utc
-      //--year=(int.parse payload[4])
-      //--month=(int.parse payload[3])
-      //--day=(int.parse payload[2])
+    return Time.epoch
       --h=(int.parse (payload[2])[0..2])
       --m=(int.parse (payload[2])[2..4])
       --s=(int.parse (payload[2])[4..6])
       --ms=(int.parse (payload[2])[7..])
-  */
 
   latitude -> float:
     return float.parse payload[3]
