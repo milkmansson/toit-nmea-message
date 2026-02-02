@@ -110,12 +110,12 @@ class Cas02 extends NmeaMessage:
 /**
 CAS03: Configures specific messages are output or not.
 
-Values set against the sentence types control how many ticks of Cas02 happen for
-  each message type to be output.
-
-Some devices only support 0 and 1 (0 = disable).  Other devices allow higher
-  numbers allowing for fewer of specific message types to be sent.  Additionally
-  later softwares have additional fields.  (These are shown in the Toitdocs.)
+Values control how many iterations of the standard output timing (set in $Cas02)
+  it takes before one of the configured sentence types are output. Some devices
+  only support 0 and 1 (0 = disable, 1 = 1 message per cycle).  Other devices
+  allow higher numbers allowing for fewer of specific message types to be sent.
+  (0 = disable, 6 = 1 message per 6 cycles).  Additionally later softwares have
+  additional fields.  (These are shown in the Toitdocs.)
 
 Message type supports v3.6 or v4.2 specification. Simply specifying any of the
   v4.2 fields (DHV, LPS, UTC, GST, or TIM) will create the message in v4.2
