@@ -58,41 +58,35 @@ class NmeaParser:
     PROPRIETARY: "Proprietary"
   }
 
-  // More:
+  /* More: not yet implemented
   static DHV ::= "DHV" // Describes receiver speed.
   static ANT ::= "ANT" // Antenna Information.
   static LPS ::= "LPS" // Leap Second Information.
   static UTC ::= "UTC" // Receiver status, simplified information for leap second correction.
   static GST ::= "GST" // Measurement accuracy details for receiver pseudoranges.
   static INS ::= "INS" // Inertial Navigation System (INS) information.
+  */
 
   // Query
   static QUERY ::= "Q"
 
   // Type Registry:
-  registry_/Map := {:}
+  registry_/Map := {
+    Rmc.ID: :: | talker id payload | Rmc.private_ talker id payload,
+    Gsa.ID: :: | talker id payload | Gsa.private_ talker id payload,
+    Gsv.ID: :: | talker id payload | Gsv.private_ talker id payload,
+    Vtg.ID: :: | talker id payload | Vtg.private_ talker id payload,
+    Txt.ID: :: | talker id payload | Txt.private_ talker id payload,
+    Gga.ID: :: | talker id payload | Gga.private_ talker id payload,
+    Zda.ID: :: | talker id payload | Zda.private_ talker id payload,
+    Gll.ID: :: | talker id payload | Gll.private_ talker id payload,
+    Gns.ID: :: | talker id payload | Gns.private_ talker id payload,
+  }
 
-  constructor:
-    // Build the registry and register all the types:
-    registry_[RMC] = (:: | talker id payload |
-      Rmc.private_ talker id payload)
-    registry_[GSA] = (:: | talker id payload |
-      Gsa.private_ talker id payload)
-    registry_[GSV] = (:: | talker id payload |
-      Gsv.private_ talker id payload)
-    registry_[VTG] = (:: | talker id payload |
-      Vtg.private_ talker id payload)
-    registry_[TXT] = (:: | talker id payload |
-      Txt.private_ talker id payload)
-    registry_[GGA] = (:: | talker id payload |
-      Gga.private_ talker id payload)
-    registry_[ZDA] = (:: | talker id payload |
-      Zda.private_ talker id payload)
-    registry_[GLL] = (:: | talker id payload |
-      Gll.private_ talker id payload)
+  constructor --proprietary-messages/Map:
+    add proprietary-messages
 
-  from-reader io-reader/io.Reader:
-
+  from-reader io-reader/io.Reader -> NmeaMessage:
     if (io-reader.peek-byte 0) != NMEA-MAGIC-BYTE_:
       throw "$INVALID-NMEA-MESSAGE_: sentence first char not \$"
 
