@@ -605,12 +605,6 @@ Multiple messages may be reported if multiple systems are used for the current
   true. The identifier will follow the convention of other messages, but field
   $system-id will indicate which system the message is providing information
   from.
-
-Space Vehicle ID's (SVIDs) are numbered as follows:
-a. GPS: 01-32
-b. SBAS: 33-51 (120 to 138)
-c. GLONASS: 65-92 (01 to 28)
-d. QZSS: 93-99 (193 to 199)
 */
 class Gsa extends NmeaMessage:
   static ID ::= "GSA"
@@ -675,6 +669,14 @@ class Gsa extends NmeaMessage:
   v-dop -> float:
     return float.parse payload[17]
 
+  /**
+  Satellite IDs (SVIDs) used in the calculation.
+
+  Satellite IDs are mapped to a 00-99 value to stay within specification.  PRNs
+    (the actual satellite ID) are mapped/tracked differently depending on the
+    manufacturer.  Use these values for comparison only, and use manufacturer
+    documentation to turn these numbers into PRN's.
+  */
   satellites -> List:
     blank-pos := payload.index-of ""
     end := 15
@@ -697,6 +699,11 @@ GSV is not the collection of satellites that are actually used in the math, but
 
 There may be a large number of PRNs including elevation/azimuth/SNR data.  The
   information is likely to be split across multiple messages.
+
+Some manufacturers will produce several messages, with different talker ID's to
+  show the different satellite constellations.  Other manufacturers will mix
+  producing `$GNGSV` messages, with a mapping which can be used to convert to the
+  PRN.  Consult your hardware vendor documentation.
 */
 class Gsv extends NmeaMessage:
   static ID ::= "GSV"
@@ -725,9 +732,16 @@ class Gsv extends NmeaMessage:
     return int.parse payload[3]
 
   /**
-  The SV's in this message.
+  A map SV's currently in view.
 
-  Returns a map with the PRN as key, and [Elevation, Azimuth, SNR] as data.
+  Map uses the satellites' PRN as key, with a list containing [Elevation,
+    Azimuth, SNR] as data.
+
+  Other messages (eg GSA) map out satellite IDs to a 00-99 value to stay within
+    specification.  PRNs (the actual satellite ID) are mapped/tracked
+    differently depending on the manufacturer.  Before matching an SV from this
+    map, convert SV's from other messages into PRN's using manufacturer
+    documentation.
   */
   svs -> Map:
     out-map := {:}
@@ -907,6 +921,11 @@ class Gbs extends NmeaMessage:
   SVID of most likely failed satellite.
 
   null if no satellites failed in RAIM test.
+
+  Satellite IDs (SVIDs) are mapped to a 00-99 value to stay within
+    specification.  PRNs (the actual satellite ID) are mapped/tracked
+    differently depending on the manufacturer.  Use these values for comparison
+    only, and use manufacturer documentation to turn these numbers into PRN's.
   */
   svid -> int?:
     return int.parse payload[5] --if-error=: null
