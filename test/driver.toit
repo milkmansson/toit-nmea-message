@@ -4,10 +4,8 @@
 
 import serial
 import io
-import io
 import log
 import monitor
-import reader as old-reader
 import serial
 
 import nmea-message
@@ -60,28 +58,15 @@ class Driver:
   /**
   Creates a new driver object.
 
-  The $reader should be an $io.Reader, but $old-reader.Reader objects are
-    still supported for backwards compatibility. Support for $old-reader.Reader
-    is deprecated and will be removed in a future release.
-  Use $Reader to create an $io.Reader from a $serial.Device.
-
-  The $writer should be an $io.Writer, but "old-style" writers are still
-    supported for backwards compatibility. Support for "old-style" writers is
-    deprecated and will be removed in a future release.
-  Use $Writer to create an $io.Writer from a $serial.Device.
+  Create an $io.Reader from a $serial.Device, and provide as $reader.  Similarly,
+    create an $io.Writer from a $serial.Device, and provide as $writer.
   */
 
-  constructor reader writer parser/nmea-message.NmeaParser logger/log.Logger=log.default:
+  constructor reader/io.Reader writer/io.Writer parser/nmea-message.NmeaParser logger/log.Logger=log.default:
     logger_ = logger.with-name "nmea-driver"
-
-    if reader is old-reader.Reader:
-      reader = io.Reader.adapt reader
-
-    if writer is not io.Writer:
-      writer = io.Writer.adapt writer
-
     adapter_ = Adapter_ reader writer parser logger_
 
+    // Starts the task that listens for incoming messages
     run
 
   /**
@@ -89,7 +74,8 @@ class Driver:
 
   Does not return until the task has started, preventing further code execution
     until recieved messages are guaranteed to be seen.  (If this does not wait,
-    first incoming messages may be missed in the few msec the task is starting.)
+    first incoming message replies may be missed in the few msec the task is
+    starting.)
   */
   run -> none:
     assert: not runner_

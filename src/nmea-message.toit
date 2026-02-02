@@ -4,7 +4,6 @@
 
 import io
 import io show LITTLE-ENDIAN
-import reader as old-reader
 
 class NmeaParser:
   static UBX-MAGIC-BYTE_ ::= 0xb5
@@ -110,8 +109,7 @@ class NmeaParser:
     registry[GLL] = (:: | talker id payload |
       Gll.private_ talker id payload)
 
-  from-reader reader/old-reader.Reader:
-    io-reader/io.Reader := reader is io.Reader ? reader as io.Reader : io.Reader.adapt reader
+  from-reader io-reader/io.Reader:
 
     if (io-reader.peek-byte 0) != NMEA-MAGIC-BYTE_:
       throw "$INVALID-NMEA-MESSAGE_: sentence first char not \$"
