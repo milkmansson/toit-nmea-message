@@ -10,35 +10,17 @@ import serial
 
 import nmea-message
 
-
 /**
 Generic driver for GNSS devices.
 
 Driver simply sets up an adapter and puts all messages through the NMEA message
-  parser, displaying the results.
-
-Is a cut down version of the https://github.com/toitware/ublox-gnss-driver,
-  tailored only to this task.
+  parser, displaying the results.  This driver is a cut down version of the
+  https://github.com/toitware/ublox-gnss-driver tailored to this task.
 */
 
 class Driver:
 
   static COMMAND-TIMEOUT_ ::= Duration --s=5
-
-  static NMEA-CLASS-ID_ := 0xF0
-  static NMEA-MESSAGE-IDS_ := {
-    "GGA": 0x00,
-    "GLL": 0x01,
-    "GSA": 0x02,
-    "GSV": 0x03,
-    "RMC": 0x04,
-    "VTG": 0x05,
-    "GRS": 0x06,
-    "GST": 0x07,
-    "ZDA": 0x08,
-    "GBS": 0x09,
-    "DTM": 0x0A,
-  }
 
   // Latches/Mutexes for managing and acknowledging commands
   command-mutex_ := monitor.Mutex  // Used to ensure one command at once.
@@ -61,7 +43,6 @@ class Driver:
   Create an $io.Reader from a $serial.Device, and provide as $reader.  Similarly,
     create an $io.Writer from a $serial.Device, and provide as $writer.
   */
-
   constructor reader/io.Reader writer/io.Writer parser/nmea-message.NmeaParser logger/log.Logger=log.default:
     logger_ = logger.with-name "nmea-driver"
     adapter_ = Adapter_ reader writer parser logger_

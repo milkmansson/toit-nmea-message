@@ -35,7 +35,9 @@ class NmeaParser:
   static SOUNDER ::= "SD"      // Sounder (depth).
   static SPEED-LOG ::= "VW"    // Speed log (water speed).
   static WEATHER-INST ::= "WI" // Weather instruments.
-  static PROPRIETARY ::= "P"   // Proprietary, following chars represent manufacturer.
+
+  // Talker ID for any proprietary NMEA messages:
+  static PROPRIETARY ::= "P"   // Chars following P represent manufacturer.
 
   static TALKER-LOOKUP_ ::= {
     GPS: "GPS",
@@ -55,11 +57,6 @@ class NmeaParser:
     WEATHER-INST: "Weather instruments",
     PROPRIETARY: "Proprietary"
   }
-
-  // (Known) Proprietary Talkers:
-  static PUBX ::= "Ublox"      // u-blox proprietary.
-  static PGRME ::= "Garmin"    // Garmin proprietary.
-  static PCAS ::= "Casic"      // Casic proprietary.
 
   // Message Formats (IDs):
   static RMC ::= "RMC" // Time, date, lat/lon, speed over ground, course over ground, status.
