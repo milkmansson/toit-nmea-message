@@ -81,7 +81,7 @@ class NmeaParser:
     Gbs.ID: :: | talker id payload | Gbs.private_ talker id payload,
   }
 
-  constructor --proprietary-messages/Map?:
+  constructor --proprietary-messages/Map?=null:
     if proprietary-messages: add proprietary-messages
 
   from-reader io-reader/io.Reader -> NmeaMessage:
@@ -426,10 +426,15 @@ class Vtg extends NmeaMessage:
     //print "KMH PARSING $payload[7]"
     return float.parse payload[5] --if-error=: 0.0
 
-  positioning-mode -> string:
-    return payload[9]
+  /** Value in NMEA v2.3 or later. */
+  positioning-mode -> string?:
+    if payload.size >= 10:
+      return payload[9]
+    return null
 
   stringify -> string:
+    if not positioning-mode:
+      return  "$super: mode:NOT PROVIDED"
     if positioning-mode == POS-MODE-INVALID-DATA or positioning-mode == POS-MODE-MANUAL:
       return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]"
     return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]|kmh:$(%0.0f speed-kmh)|kts:$(%0.0f speed-kts)|course:$(%0.3f true-course)"

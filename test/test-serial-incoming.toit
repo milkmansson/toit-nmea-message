@@ -30,4 +30,3 @@ main:
   // Print driver start message, and let the driver's own tasks run and
   // simply display incoming messages.
   print "Driver started..."
-

@@ -16,31 +16,18 @@ Support for the binary UBX protocol is given in a different driver.
 */
 
 class NmeaUbxParser:
-  // Talker IDs:
-  static PROPRIETARY ::= "P" // Proprietary type, sole supported in this library.
-
-  // Message IDs:
-  static UBX00 ::= "00" // Position/navigation solution.
-  static UBX04 ::= "04" // Time/clock information.
-  static UBX40 ::= "40" // Time/clock information.
-
-  static messages -> Map:
-    message-map := {:}
-    message-map[UBX00] = (:: | talker id payload |
-      Ubx00.private_ PROPRIETARY id payload)
-    message-map[UBX04] = (:: | talker id payload |
-      Ubx04.private_ PROPRIETARY id payload)
-    message-map[UBX40] = (:: | talker id payload |
-      Ubx40.private_ PROPRIETARY id payload)
-    return message-map
+  static MESSAGES/Map := {
+    Ubx00.ID: :: | talker id payload | Ubx00.private_ talker id payload,
+    Ubx04.ID: :: | talker id payload | Ubx04.private_ talker id payload,
+  }
 
 
 /**
 PUBX00: uBlox position/navigation solution.
 */
 class Ubx00 extends NmeaMessage:
-  static ID ::= NmeaUbxParser.UBX00
-  talker/string := NmeaUbxParser.PROPRIETARY
+  static ID ::= "00"
+  talker/string := "P"
 
   static STATUS-NO-FIX ::= "NF"
   static STATUS-DEAD-RECKONING ::= "DR"
@@ -125,8 +112,8 @@ Gives information on precise time, logging, synchronization, and PPS alignment.
   more accurate, and fully featured (clock validity, leap second data, etc).
 */
 class Ubx04 extends NmeaMessage:
-  static ID ::= NmeaUbxParser.UBX04
-  talker/string := NmeaUbxParser.PROPRIETARY
+  static ID ::= "04"
+  talker/string := "P"
 
   constructor:
     super.private_ talker ID ["$(talker)UBX","$ID"]
@@ -140,8 +127,8 @@ class Ubx04 extends NmeaMessage:
 PUBX40: RATE. Set NMEA message output rates etc.
 */
 class Ubx40 extends NmeaMessage:
-  static ID ::= NmeaUbxParser.UBX40
-  talker/string := NmeaUbxParser.PROPRIETARY
+  static ID ::= "40"
+  talker/string := "P"
 
   static FIELD-DDC_ ::= 3
   static FIELD-UART1_ ::= 4

@@ -15,56 +15,26 @@ Support for the CASIC Standard Interface Protocol (CSIP) binary protocol is
 */
 
 class NmeaCasicParser:
-  // Talker IDs:
-  static PROPRIETARY ::= "P" // Proprietary type, sole supported in this library.
-
-  // Message IDs:
-  static CAS00 ::= "CAS00" // Save config to flash.
-  static CAS01 ::= "CAS01" // Baud Rate.
-  static CAS02 ::= "CAS02" // Fix Rate.
-  static CAS03 ::= "CAS03" // Sentence Types.
-  static CAS04 ::= "CAS04" // Constellations.
-  static CAS05 ::= "CAS05" // NMEA protocol type selection.
-  static CAS06 ::= "CAS06" // Query module type information.
-  static CAS10 ::= "CAS10" // Self restart.
-  static CAS12 ::= "CAS12" // Low power mode.
-  static CAS15 ::= "CAS15" // Satellite Types.
-  static CAS20 ::= "CAS20" // Online upgrade.
-  static CAS60 ::= "CAS60" // Time Information.
-
-  static messages -> Map:
-    message-map := {:}
-    message-map[CAS00] = (:: | talker id payload |
-      Cas00.private_ PROPRIETARY id payload)
-    message-map[CAS01] = (:: | talker id payload |
-      Cas01.private_ PROPRIETARY id payload)
-    message-map[CAS02] = (:: | talker id payload |
-      Cas02.private_ PROPRIETARY id payload)
-    message-map[CAS03] = (:: | talker id payload |
-      Cas03.private_ PROPRIETARY id payload)
-    message-map[CAS04] = (:: | talker id payload |
-      Cas04.private_ PROPRIETARY id payload)
-    message-map[CAS05] = (:: | talker id payload |
-      Cas05.private_ PROPRIETARY id payload)
-    message-map[CAS06] = (:: | talker id payload |
-      Cas06.private_ PROPRIETARY id payload)
-    message-map[CAS10] = (:: | talker id payload |
-      Cas10.private_ PROPRIETARY id payload)
-//    message-map[CAS12] = (:: | talker id payload |
-//      Cas12.private_ PROPRIETARY id payload)
-//    message-map[CAS15] = (:: | talker id payload |
-//      Cas15.private_ PROPRIETARY id payload)
-//    message-map[CAS20] = (:: | talker id payload |
-//      Cas20.private_ PROPRIETARY id payload)
-    message-map[CAS60] = (:: | talker id payload |
-      Cas60.private_ PROPRIETARY id payload)
-    return message-map
+  static MESSAGES/Map := {
+    Cas00.ID: :: | talker id payload | Cas00.private_ talker id payload,
+    Cas01.ID: :: | talker id payload | Cas01.private_ talker id payload,
+    Cas02.ID: :: | talker id payload | Cas02.private_ talker id payload,
+    Cas03.ID: :: | talker id payload | Cas03.private_ talker id payload,
+    Cas04.ID: :: | talker id payload | Cas04.private_ talker id payload,
+    Cas05.ID: :: | talker id payload | Cas05.private_ talker id payload,
+    Cas06.ID: :: | talker id payload | Cas06.private_ talker id payload,
+    Cas10.ID: :: | talker id payload | Cas10.private_ talker id payload,
+    //Cas12.ID: :: | talker id payload | Cas12.private_ talker id payload,
+    //Cas15.ID: :: | talker id payload | Cas15.private_ talker id payload,
+    //Cas20.ID: :: | talker id payload | Cas20.private_ talker id payload,
+    Cas60.ID: :: | talker id payload | Cas60.private_ talker id payload,
+  }
 
 /**
 CAS00: Save current configuration in flash.
 */
 class Cas00 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS00
+  static ID ::= "CAS00"
   talker/string := "P"
 
   constructor:
@@ -78,7 +48,7 @@ class Cas00 extends NmeaMessage:
 CAS02: Set Baud Rate.
 */
 class Cas01 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS01
+  static ID ::= "CAS01"
   talker/string := "P"
 
   static BAUD-4800 ::= 0   // 4800 bps
@@ -93,7 +63,8 @@ class Cas01 extends NmeaMessage:
     BAUD-19200: 19200,
     BAUD-38400: 38400,
     BAUD-57600: 57600,
-    BAUD-115200: 115200 }
+    BAUD-115200: 115200,
+  }
 
   constructor.set baudrate/int:
     assert: BAUD-LOOKUP_.contains baudrate
@@ -107,7 +78,7 @@ class Cas01 extends NmeaMessage:
 CAS02: Set positioning update rate.
 */
 class Cas02 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS02
+  static ID ::= "CAS02"
   talker/string := "P"
 
   static OUTPUT-02HZ ::= 5000 // Update rate 0.2Hz, 1 message per 5 seconds.
@@ -122,7 +93,8 @@ class Cas02 extends NmeaMessage:
     OUTPUT-2HZ: 2.0,
     OUTPUT-4HZ: 4.0,
     OUTPUT-5HZ: 5.0,
-    OUTPUT-10HZ: 10.0}
+    OUTPUT-10HZ: 10.0,
+  }
 
   constructor.set rate/int:
     assert: OUTPUT-RATE-LOOKUP_.contains rate
@@ -150,7 +122,7 @@ Message type supports v3.6 or v4.2 specification. Simply specifying any of the
   format.
 */
 class Cas03 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS03
+  static ID ::= "CAS03"
   static PAYLOAD-SIZE_ ::= 9
   static PAYLOAD-SIZE-EXTENDED_ ::= 19
   talker/string := "P"
@@ -260,7 +232,7 @@ The mask can be any combination of GPS/BDS/GLONASS OR'd together, for example,
   (GPS | BDS | GLONASS) which would be 7.
 */
 class Cas04 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS04
+  static ID ::= "CAS04"
   talker/string := "P"
 
   static GPS     ::= 0b00001
@@ -273,8 +245,8 @@ class Cas04 extends NmeaMessage:
     BDS: "BDS",
     GLONASS: "GLONASS",
     GALILEO: "Galileo",
-    QZSS: "QZSS"
-    }
+    QZSS: "QZSS",
+  }
 
   constructor.set --mask/int:
     assert: 0 <= mask <= 31
@@ -314,7 +286,7 @@ Values:
 - $LEGACY-GPS-ONLY: GPS-only, compatible with NMEA 2.2
 */
 class Cas05 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS05
+  static ID ::= "CAS05"
   talker/string := "P"
 
   static NMEA-41-STRICT ::= 2
@@ -323,8 +295,8 @@ class Cas05 extends NmeaMessage:
   static MODE-LOOKUP_ ::= {
     NMEA-41-STRICT: "NMEA 4.1 Strict",
     MIXED-GNSS: "Mixed GNSS",
-    LEGACY-GPS-ONLY: "GPS Only"
-    }
+    LEGACY-GPS-ONLY: "GPS Only",
+  }
 
   constructor.set --mode/int:
     assert: MODE-LOOKUP_.contains mode
@@ -349,7 +321,7 @@ Information values:
 - $INFO-CUSTOMER: Query upgrade code information
 */
 class Cas06 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS06
+  static ID ::= "CAS06"
   talker/string := "P"
 
   static INFO-FIRMWARE ::= 0
@@ -362,11 +334,12 @@ class Cas06 extends NmeaMessage:
     INFO-HARDWARE: "Hardware",
     INFO-MODE: "Mode",
     INFO-CUSTOMER: "Customer",
-    INFO-UPGRADE-CODE: "Upgrade"}
+    INFO-UPGRADE-CODE: "Upgrade",
+  }
 
   constructor.poll:
     talker = NmeaParser.GPS
-    msgid := NmeaParser.QUERY
+    msgid := "Q"
     super.private_  talker msgid ["$talker$msgid",ID]
 
   constructor.set info-type/int:
@@ -387,7 +360,7 @@ class Cas06 extends NmeaMessage:
 CAS10: Restarting the device.
 */
 class Cas10 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS10
+  static ID ::= "CAS10"
   talker/string := "P"
 
   static START-HOT      ::= 0  // Use existing configuration in initialization.
@@ -402,7 +375,8 @@ class Cas10 extends NmeaMessage:
     START-COLD: "Cold Start",
     START-FACTORY: "Factory Reset",
     DISABLE-SERIAL: "Disable Serial",
-    ENABLE-SERIAL: "Enable Serial"}
+    ENABLE-SERIAL: "Enable Serial",
+  }
 
   constructor.set start-type/int:
     assert: START-LOOKUP_.contains start-type
@@ -424,7 +398,7 @@ CAS12: Receiver Standby Mode Control.
 "5L" low-power modules support this command.
 */
 class Cas12 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS12
+  static ID ::= "CAS12"
   talker/string := "P"
 
   constructor.poll --seconds/int:
@@ -449,7 +423,7 @@ CAS60: Receiver Time Information
 v5302 or later required.
 */
 class Cas60 extends NmeaMessage:
-  static ID ::= NmeaCasicParser.CAS60
+  static ID ::= "CAS60"
   talker/string := "P"
 
   constructor.private_ .talker/string id/string payload/List:
