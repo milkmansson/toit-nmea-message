@@ -13,8 +13,8 @@ SiRF receivers using the NMEA Protocol support proprietary NMEA messages,
 
 class NmeaSrfParser:
   static MESSAGES/Map := {
-    Srf151.ID: :: | talker id payload | Srf151.private_ talker id payload,
-    Srf154.ID: :: | talker id payload | Srf154.private_ talker id payload,
+    "P$Srf151.ID": :: | talker id payload | Srf151.private_ talker id payload,
+    "P$Srf154.ID": :: | talker id payload | Srf154.private_ talker id payload,
   }
 
 /**
@@ -28,6 +28,7 @@ class Srf151 extends NmeaMessage:
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ talker/string id/string payload/List:
+    // NOTE: SRF proprietary messages always use talker "P".
     super.private_  "P" ID payload
 
 
@@ -42,5 +43,5 @@ class Srf154 extends NmeaMessage:
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ talker/string id/string payload/List:
-    // NOTE: SRF proprietary messages always use talker "P".  Ignored by design.
+    // NOTE: SRF proprietary messages always use talker "P".
     super.private_  "P" ID payload

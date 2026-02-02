@@ -17,8 +17,8 @@ Support for the binary UBX protocol is given in a different driver.
 
 class NmeaUbxParser:
   static MESSAGES/Map := {
-    Ubx00.ID: :: | talker id payload | Ubx00.private_ talker id payload,
-    Ubx04.ID: :: | talker id payload | Ubx04.private_ talker id payload,
+    "P$Ubx00.ID": :: | talker id payload | Ubx00.private_ talker id payload,
+    "P$Ubx04.ID": :: | talker id payload | Ubx04.private_ talker id payload,
   }
 
 
@@ -26,8 +26,7 @@ class NmeaUbxParser:
 PUBX00: uBlox position/navigation solution.
 */
 class Ubx00 extends NmeaMessage:
-  static ID ::= "00"
-  talker/string := "P"
+  static ID ::= "UBX,00"
 
   static STATUS-NO-FIX ::= "NF"
   static STATUS-DEAD-RECKONING ::= "DR"
@@ -50,11 +49,11 @@ class Ubx00 extends NmeaMessage:
 
   /** Message content asks the receiver for a UBX00 with data. */
   constructor.poll:
-    super.private_ talker ID ["$(talker)UBX","$ID"]
+    super.private_ "P" ID ["PUBX","$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    super.private_ "P" ID payload
 
   is-poll -> bool:
     return payload.size < 3
@@ -122,23 +121,18 @@ Gives information on precise time, logging, synchronization, and PPS alignment.
   more accurate, and fully featured (clock validity, leap second data, etc).
 */
 class Ubx04 extends NmeaMessage:
-  static ID ::= "04"
-  talker/string := "P"
-
-  constructor:
-    super.private_ talker ID ["$(talker)UBX","$ID"]
+  static ID ::= "UBX,04"
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    super.private_  "P" ID payload
 
 
 /**
 PUBX40: RATE. Set NMEA message output rates etc.
 */
 class Ubx40 extends NmeaMessage:
-  static ID ::= "40"
-  talker/string := "P"
+  static ID ::= "UBX,40"
 
   static FIELD-DDC_ ::= 3
   static FIELD-UART1_ ::= 4
@@ -160,20 +154,20 @@ class Ubx40 extends NmeaMessage:
       --usb-rate/int?=null
       --spi-rate/int?=null:
     fields := List 9
-    fields[0] = "$(talker)UBX"
-    fields[1] = "$ID"
-    fields[2] = "$type"
+    fields[0] = "PUBX"
+    fields[1] = "40"
+    fields[2] = "$type"  // todo: put a guard on this to an NMEA type?
     fields[FIELD-DDC_] = ddc-rate ? ddc-rate : ""
     fields[FIELD-UART1_] = uart1-rate ? uart1-rate : ""
     fields[FIELD-UART2_] = uart2-rate ? uart2-rate : ""
     fields[FIELD-USB_] = usb-rate ? usb-rate : ""
     fields[FIELD-SPI_] = spi-rate ? spi-rate : ""
     fields[8] = "0"
-    super.private_ talker ID fields
+    super.private_ "P" ID fields
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    super.private_  "P" ID payload
 
   type -> string:
     return payload[2]

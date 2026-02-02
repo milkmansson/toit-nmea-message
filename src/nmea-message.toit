@@ -10,7 +10,9 @@ class NmeaParser:
   static NMEA-MAGIC-BYTE_ ::= 0x24
   static AIS-MAGIC-BYTE_ ::= 0x21
 
-  static MAX-MESSAGE-SIZE_ ::= 82
+  // The NMEA standard states the size should not be > 82, however in practice,
+  // allegedly this is exceeded regularly.  Strategy: Accept 2* this figure for now.
+  static MAX-MESSAGE-SIZE_ ::= 164
   static INVALID-NMEA-MESSAGE_ ::= "INVALID NMEA MESSAGE"
   static DELIMITER_/string ::= ","
   static CHECKSUM-DELIMITER_/string ::= "*"
@@ -91,6 +93,7 @@ class NmeaParser:
     // Get full the packet (no size information provided) and verify length limits.
     // Perhaps switch to .read-string --max-size for security?
     sentence/string ::= io-reader.read-line
+    //sentence/string ::= io-reader.read-string --max-size=MAX-MESSAGE-SIZE_
 
     if not sentence.contains-only-ascii:
       throw "$INVALID-NMEA-MESSAGE_: sentence not completely ascii"
@@ -148,14 +151,12 @@ class NmeaParser:
   static is-valid-sentence_ sentence/string -> bool:
     // Check the payload length.
     if sentence.size > MAX-MESSAGE-SIZE_:
-      print "message too long"
       return false
-      //throw "$INVALID-NMEA-MESSAGE_: invalid size"
 
     // Check checksum.
     cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
     if cs-delimiter == -1 :
-      // checksum missing (allowed in spec)
+      // Checksum missing (allowed in spec).
       return true
 
     message := sentence[1..cs-delimiter]
