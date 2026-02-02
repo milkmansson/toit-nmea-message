@@ -92,7 +92,6 @@ class NmeaParser:
     // Perhaps switch to .read-string --max-size for security?
     sentence/string ::= io-reader.read-line
 
-    // Unsure about this one.  SiRF encodes binary data in its NMEA (allegedly).
     if not sentence.contains-only-ascii:
       throw "$INVALID-NMEA-MESSAGE_: sentence not completely ascii"
 
@@ -186,9 +185,9 @@ class NmeaParser:
 
 abstract class NmeaMessage:
   static ID ::= "NONE"
-  talker/string := ""
-  id/string := ""
-  payload/List := []
+  talker/string
+  id/string
+  payload/List
 
   constructor.private_ .talker/string .id/string .payload/List:
 

@@ -127,7 +127,7 @@ class Cas03 extends NmeaMessage:
   static PAYLOAD-SIZE-EXTENDED_ ::= 19
   talker/string := "P"
 
-  // Fields for v3.6 specification
+  // Fields for v3.6 specification:
   static TYPE-GGA ::= 1
   static TYPE-GLL ::= 2
   static TYPE-GSA ::= 3
@@ -137,7 +137,7 @@ class Cas03 extends NmeaMessage:
   static TYPE-ZDA ::= 7
   static TYPE-TXT ::= 8
 
-  // Additional fields for v4.2 specification
+  // Additional fields for v4.2 specification:
   static TYPE-DHV ::= 9
   static TYPE-LPS ::= 10
   static TYPE-UTC ::= 13
@@ -180,21 +180,21 @@ class Cas03 extends NmeaMessage:
       payload-size = PAYLOAD-SIZE-EXTENDED_
     super.private_ talker ID (List payload-size)
     payload[0] = "$talker$ID"
-    payload[TYPE-GGA] = gga ? gga : ""
-    payload[TYPE-GLL] = gll ? gll : ""
-    payload[TYPE-GSA] = gsa ? gsa : ""
-    payload[TYPE-GSV] = gsv ? gsv : ""
-    payload[TYPE-RMC] = rmc ? rmc : ""
-    payload[TYPE-VTG] = vtg ? vtg : ""
-    payload[TYPE-ZDA] = zda ? zda : ""
-    payload[TYPE-TXT] = txt ? txt : ""
+    payload[TYPE-GGA] = gga or ""
+    payload[TYPE-GLL] = gll or ""
+    payload[TYPE-GSA] = gsa or ""
+    payload[TYPE-GSV] = gsv or ""
+    payload[TYPE-RMC] = rmc or ""
+    payload[TYPE-VTG] = vtg or ""
+    payload[TYPE-ZDA] = zda or ""
+    payload[TYPE-TXT] = txt or ""
 
     if payload.size == PAYLOAD-SIZE-EXTENDED_:
-      payload[TYPE-DHV] = dhv ? dhv : ""
-      payload[TYPE-LPS] = lps ? lps : ""
-      payload[TYPE-UTC] = utc ? utc : ""
-      payload[TYPE-GST] = gst ? gst : ""
-      payload[TYPE-TIM] = tim ? tim : ""
+      payload[TYPE-DHV] = dhv or ""
+      payload[TYPE-LPS] = lps or ""
+      payload[TYPE-UTC] = utc or ""
+      payload[TYPE-GST] = gst or ""
+      payload[TYPE-TIM] = tim or ""
 
   constructor.private_ .talker/string id/string payload/List:
     assert: payload.size == PAYLOAD-SIZE_ or payload.size == PAYLOAD-SIZE-EXTENDED_
@@ -447,7 +447,7 @@ class Cas60 extends NmeaMessage:
   tow -> int:
     return int.parse payload[4]
 
-  /** If time, $week-number and $tow are valid time. */
+  /** Whether time, $week-number and $tow are valid time. */
   time-valid -> bool:
     return payload[5] == "1"
 
@@ -455,6 +455,6 @@ class Cas60 extends NmeaMessage:
   leaps-number -> int:
     return int.parse payload[6]
 
-  /** If the leap seconds leaps are valid. */
+  /** Whether the leap seconds leaps are valid. */
   leaps-valid -> bool:
     return payload[7] == "1"

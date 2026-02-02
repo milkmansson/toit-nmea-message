@@ -25,7 +25,7 @@ class Srf151 extends NmeaMessage:
   talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["$(talker)SRF$ID"]
+    super.private_ talker ID ["$(talker)$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
@@ -40,7 +40,7 @@ class Srf154 extends NmeaMessage:
   talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["$(talker)SRF$ID"]
+    super.private_ talker ID ["$(talker)$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ .talker/string id/string payload/List:
