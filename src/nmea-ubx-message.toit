@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Toit contributors.
+// Use of this source code is governed by a MIT-style license that can be found
+// in the LICENSE file.
+
 import .nmea-message
 
 /**
@@ -58,6 +62,7 @@ class Ubx00 extends NmeaMessage:
   is-poll -> bool:
     return payload.size < 3
 
+  /*
   time -> Time:
     return Time.utc
       //--year=(int.parse payload[4])
@@ -67,6 +72,7 @@ class Ubx00 extends NmeaMessage:
       --m=(int.parse (payload[2])[2..4])
       --s=(int.parse (payload[2])[4..6])
       --ms=(int.parse (payload[2])[7..])
+  */
 
   latitude -> float:
     return float.parse payload[3]

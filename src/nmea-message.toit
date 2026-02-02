@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Toit contributors.
+// Use of this source code is governed by a MIT-style license that can be found
+// in the LICENSE file.
+
 import io
 import io show LITTLE-ENDIAN
 import reader as old-reader
