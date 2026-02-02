@@ -113,15 +113,15 @@ class NmeaParser:
     // Type-1 message IDs - types (Casic, Garmin) whose message IDs are held in
     // the first field only. (eg, Message ID definition goes to first comma.)
     type-1/string := sentence[1..first-comma]
-    // Type-2 message IDs - types (UBX, SRF) whose message ID also uses the
+    // Type-2 message IDs - types (uBlox, SiRF) whose message ID also uses the
     // next field. (eg, Message ID definition goes to second comma.)
     type-2/string := sentence[1..second-comma]
 
     talker/string := ?
     id/string := ?
-    if type-1[0..1] == "P":
+    if type-1[0] == 'P':
       // Type 1 Message handling:
-      talker = type-1[0..1]
+      talker = "P"
       id = type-1[1..]
       if registry_.contains id:
         return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
