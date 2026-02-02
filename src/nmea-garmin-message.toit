@@ -23,25 +23,23 @@ GRMF:  Position/navigation solution.
 */
 class Grmf extends NmeaMessage:
   static ID ::= "GRMF"
-  talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["$talker$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    super.private_  "P" ID payload
 
 /**
 GRME: Time/clock information.
 */
 class Grme extends NmeaMessage:
   static ID ::= "GRME"
-  talker/string := "P"
 
   constructor:
-    super.private_ talker ID ["$talker$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_  talker id payload
+  constructor.private_ talker/string id/string payload/List:
+    super.private_  "P" ID payload
