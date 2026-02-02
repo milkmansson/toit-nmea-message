@@ -85,25 +85,25 @@ class NmeaParser:
   static QUERY ::= "Q"
 
   // Type Registry:
-  registry/Map := {:}
+  registry_/Map := {:}
 
   constructor:
     // Build the registry and register all the types:
-    registry[RMC] = (:: | talker id payload |
+    registry_[RMC] = (:: | talker id payload |
       Rmc.private_ talker id payload)
-    registry[GSA] = (:: | talker id payload |
+    registry_[GSA] = (:: | talker id payload |
       Gsa.private_ talker id payload)
-    registry[GSV] = (:: | talker id payload |
+    registry_[GSV] = (:: | talker id payload |
       Gsv.private_ talker id payload)
-    registry[VTG] = (:: | talker id payload |
+    registry_[VTG] = (:: | talker id payload |
       Vtg.private_ talker id payload)
-    registry[TXT] = (:: | talker id payload |
+    registry_[TXT] = (:: | talker id payload |
       Txt.private_ talker id payload)
-    registry[GGA] = (:: | talker id payload |
+    registry_[GGA] = (:: | talker id payload |
       Gga.private_ talker id payload)
-    registry[ZDA] = (:: | talker id payload |
+    registry_[ZDA] = (:: | talker id payload |
       Zda.private_ talker id payload)
-    registry[GLL] = (:: | talker id payload |
+    registry_[GLL] = (:: | talker id payload |
       Gll.private_ talker id payload)
 
   from-reader io-reader/io.Reader:
@@ -146,14 +146,14 @@ class NmeaParser:
       // Type 1 Message handling:
       talker = type-1[0..1]
       id = type-1[1..]
-      if registry.contains id:
-        return registry[id].call talker id (sentence[1..end].split DELIMITER_)
+      if registry_.contains id:
+        return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
 
       // Message is a P, but must be type 2: message ID information goes to second comma.
 
       id2 := type-2[1..]
-      if registry.contains id2:
-        return registry[id2].call talker id2 (sentence[1..end].split DELIMITER_)
+      if registry_.contains id2:
+        return registry_[id2].call talker id2 (sentence[1..end].split DELIMITER_)
 
       throw "Unknown proprietary message type '$id' or '$id2'"
 
@@ -162,8 +162,8 @@ class NmeaParser:
       talker = type-1[0..2]
       id = type-1[2..]
 
-      if registry.contains id:
-        return registry[id].call talker id (sentence[1..end].split DELIMITER_)
+      if registry_.contains id:
+        return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
       else:
         throw "Unknown message type $id"
 
@@ -198,15 +198,14 @@ class NmeaParser:
     return checksum
 
   /**
-  Adds the dictionary of message types (and their approprate constructors) from
-    extension classes.
+  Adds the message types (and their approprate constructors) from extensions.
   */
   add input-map/Map -> none:
     input-map.keys.do: | id |
-      registry[id] = input-map[id]
+      registry_[id] = input-map[id]
 
   message-count -> int:
-    return registry.size
+    return registry_.size
 
 
 abstract class NmeaMessage:
