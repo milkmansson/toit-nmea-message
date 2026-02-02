@@ -1,7 +1,11 @@
+// Copyright (C) 2025 Toit contributors.
+// Use of this source code is governed by a MIT-style license that can be found
+// in the LICENSE file.
+
 import nmea-message.nmea-message show *
 import nmea-message.nmea-casic-message show *
 import nmea-message.nmea-ubx-message show *
-import nmea-message.nmea-sirf-message show *
+import nmea-message.nmea-srf-message show *
 import nmea-message.nmea-garmin-message show *
 
 main:
@@ -26,4 +30,3 @@ main:
   print "List of all message types ($nmea-parser.message-count): "
   nmea-parser.registry.keys.do:
     print " - $it"
-

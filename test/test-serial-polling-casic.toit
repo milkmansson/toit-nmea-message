@@ -27,7 +27,6 @@ Text output for the readme:
 
 */
 
-
 main:
   // Assemble parser.
   nmea-parser := NmeaParser
