@@ -18,6 +18,7 @@ Support for the binary UBX protocol is given in a different driver.
 class NmeaUbxParser:
   static MESSAGES/Map := {
     "P$Ubx00.ID": :: | talker id payload | Ubx00.private_ talker id payload,
+    "P$Ubx03.ID": :: | talker id payload | Ubx03.private_ talker id payload,
     "P$Ubx04.ID": :: | talker id payload | Ubx04.private_ talker id payload,
   }
 
@@ -106,6 +107,30 @@ class Ubx00 extends NmeaMessage:
 
   num-svs -> int:
     return int.parse payload[18] --if-error=: 0
+
+  stringify -> string:
+    if is-poll:
+      return "$super: poll"
+    return  "$super: "
+
+
+/**
+PUBX03: Contains satellite status information.
+*/
+class Ubx03 extends NmeaMessage:
+  static ID ::= "UBX,03"
+
+  /** Message content asks the receiver for a UBX03 with data. */
+  constructor.poll:
+    super.private_ "P" ID ["PUBX","03"]
+
+  constructor.private_ talker/string id/string payload/List:
+    super.private_ "P" ID payload
+
+  is-poll -> bool:
+    return payload.size < 3
+
+
 
   stringify -> string:
     if is-poll:

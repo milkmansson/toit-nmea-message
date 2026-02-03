@@ -2,7 +2,9 @@
 // Use of this source code is governed by a MIT-style license that can be found
 // in the LICENSE file.
 
-import nmea-message
+import nmea-message show *
+import nmea-message.nmea-ubx-message show *
+import expect show *
 
 /**
 Some good and broken messages to test the parser against.
@@ -47,40 +49,39 @@ WEIRD-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*48"
 // BAD:
 
 // Single bit checksum error:
-bad-rmc := "\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*69"
+BAD-RMC := "\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*69"
 
 // PUBX with Bad Checksum:
-bad-cks := "\$PUBX,00,123519,4807.038,N,01131.000,E,545.4,G3,2.5,3.1,0.0,0.0,0.0,08,0.9,0.0*00"
+BAD-CKS := "\$PUBX,00,123519,4807.038,N,01131.000,E,545.4,G3,2.5,3.1,0.0,0.0,0.0,08,0.9,0.0*00"
 
 // Truncated Sentence:
-bad-trunc-1 := "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9"
+BAD-TRUNC-1 := "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9"
 
 // Truncated after *
-bad-trunc-2 := "\$GPVTG,054.7,T,034.4,M,005.5,N,010.2,K*"
+BAD-TRUNC-2 := "\$GPVTG,054.7,T,034.4,M,005.5,N,010.2,K*"
 
 // Garbage before valid sentence:
-bad-garbage-1 := "xyz123!!!\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
+BAD-GARBAGE-1 := "xyz123!!!\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
 
 // Binary junk prefix
-bad-garbage-2 := "\x00\xFF\x13\x7E\$GPGLL,4916.45,N,12311.12,W,225444,A,*1D"
+BAD-GARBAGE-2 := "\x00\xFF\x13\x7E\$GPGLL,4916.45,N,12311.12,W,225444,A,*1D"
 
 // Valid prefix, invalid body
-bad-body := "\$GPXYZ,1,2,3,4,5*3B"
+BAD-BODY := "\$GPXYZ,1,2,3,4,5*3B"
 
 // PUBX with unknown subid
-bad-subid := "\$PUBX,99,foo,bar,baz*2C"
+BAD-SUBID := "\$PUBX,99,foo,bar,baz*2C"
 
 // Multipart but no other part arrives
-bad-no-siblings := "\$GPGSV,3,1,11,07,79,048,42*5E"
+BAD-NO-SIBLINGS := "\$GPGSV,3,1,11,07,79,048,42*5E"
 
 // GSV with parts out of order
-bad-out-of-order-1 := "\$GPGSV,3,2,11,15,21,315,39*5A"
-bad-out-of-order-2 := "\$GPGSV,3,1,11,07,79,048,42*5E"
-bad-out-of-order-3 := "\$GPGSV,3,3,11,27,05,045,30*51"
+BAD-OUT-OF-ORDER-1 := "\$GPGSV,3,2,11,15,21,315,39*5A"
+BAD-OUT-OF-ORDER-2 := "\$GPGSV,3,1,11,07,79,048,42*5E"
+BAD-OUT-OF-ORDER-3 := "\$GPGSV,3,3,11,27,05,045,30*51"
 
 // Sentence split across reads
-//$GPRMC,225446,A,4916.
-//45,N,12311.12,W,000.5,054.7,191194,020.3,E*68
+BAD-SPLIT := "\$GPRMC,225446,A,4916.\r\n45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
 
 // Split right after $
 //noise noise noise$
@@ -109,23 +110,35 @@ GOOD-LIST ::= {
 }
 
 BAD-LIST ::= {
-  MINIMAL-GLL,
-  SHORT-RMC,
-  MEDIUM-GGA,
-  MEDIUM-VTG,
-  LONG-ZDA,
-  LONG-GSV-1,
-  LONG-GSV-2,
-  LONG-GSV-3,
-  WEIRD-1,
-  WEIRD-2,
-  LONG-PUBX03,
-  LONG-PUBX00,
+  BAD-RMC,
+  BAD-CKS,
+  BAD-TRUNC-1,
+  BAD-TRUNC-2,
+  BAD-GARBAGE-1,
+  BAD-GARBAGE-2,
+  BAD-BODY,
+  BAD-SUBID,
+  BAD-SPLIT,
+  BAD-NO-SIBLINGS,
+  BAD-OUT-OF-ORDER-1,
+  BAD-OUT-OF-ORDER-2,
+  BAD-OUT-OF-ORDER-3,
 }
 
 main:
-  parser := nmea-message.NmeaParser
+  nmea-parser := NmeaParser
+  nmea-parser.add NmeaUbxParser.MESSAGES
+
+  print nmea-parser.registry
+
   GOOD-LIST.do:
     print " - Doing $it"
-    test-message := parser.from-string it
-    print test-message
+
+    // Test that item parses OK:
+    //expect-no-throw : test-message := nmea-parser.from-string it
+
+    expect-no-throw : y := 3 * 5
+
+    // Test the test sentences convert to a message and then back to a sentence:
+    test-message := nmea-parser.from-string it
+    expect-identical it test-message.to-string

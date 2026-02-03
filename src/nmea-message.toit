@@ -122,7 +122,7 @@ class NmeaParser:
 
     // Type-1 message IDs - types (Casic, Garmin) whose message IDs are held in
     // the first field only. (eg, Message ID definition goes to first comma.)
-    type/string := sentence[1..first-comma]
+    type/string := sentence[1..first-comma].to-ascii-upper
 
     talker/string := ?
     id/string := ?
@@ -137,7 +137,7 @@ class NmeaParser:
       // second comma. Type-2 message IDs (eg uBlox, SiRF) have message IDs
       // that also use the next field. (eg, Message ID definition goes to second
       // comma.)
-      type = sentence[1..second-comma]
+      type = sentence[1..second-comma].to-ascii-upper
 
       id = type[1..]
       if registry_.contains id:
@@ -192,6 +192,12 @@ class NmeaParser:
 
   message-count -> int:
     return registry_.size
+
+  /**
+  Shows the content of the NMEA message registry.  (Troubleshooting purpose only)
+  */
+  registry -> Map:
+    return registry_
 
 
 abstract class NmeaMessage:
