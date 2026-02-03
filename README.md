@@ -102,9 +102,7 @@ parser registry.
 > [!IMPORTANT]
 > In order to not have one sprawling parser supporting many devices when a
 > project would usually only have one GNSS device physically attached,
-> proprietary parser libraries are provided separately.  Whilst some of the
-> code may be similar between them, they are designed not to be dependent on
-> eachother.
+> proprietary parser libraries are provided separately.
 
 Example: Initialise the library, add the UBX proprietary messages, displaying
 the difference before and after:
