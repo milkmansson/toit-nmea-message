@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style license that can be found
 // in the LICENSE file.
 
+import nmea-message
+
 /**
 Some good and broken messages to test the parser against.
 */
@@ -9,41 +11,38 @@ Some good and broken messages to test the parser against.
 // GOOD
 
 // Minimal NMEA.
-minimal-gll := "\$GPGLL,4916.45,N,12311.12,W,225444,A,*1D"
+MINIMAL-GLL := "\$GPGLL,4916.45,N,12311.12,W,225444,A,*1D"
 
 // Short: Basic RMC.
-short-rmc := "\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
+SHORT-RMC := "\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
 
 // Medium: GGA - Altitude and fix info.
-medium-gga := "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47"
+MEDIUM-GGA := "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47"
 
 // Medium: VTG - Velocity Only.
-medium-vtg := "\$GPVTG,054.7,T,034.4,M,005.5,N,010.2,K*48"
+MEDIUM-VTG := "\$GPVTG,054.7,T,034.4,M,005.5,N,010.2,K*48"
 
 // Medium Long: ZDA Date and time.
-long-zda := "\$GPZDA,201530.00,04,07,2002,00,00*60"
+LONG-ZDA := "\$GPZDA,201530.00,04,07,2002,00,00*60"
 
 // Long: GSV Multipart #1.
-long-gsv-1 := "\$GPGSV,3,1,11,07,79,048,42,08,62,308,45,10,51,176,43,13,32,092,41*7E"
+LONG-GSV-1 := "\$GPGSV,3,1,11,07,79,048,42,08,62,308,45,10,51,176,43,13,32,092,41*71"
 // Long: GSV Multipart #2.
-long-gsv-2 := "\$GPGSV,3,2,11,15,21,315,39,18,18,270,37,20,12,020,35,23,09,180,33*7C"
+LONG-GSV-2 := "\$GPGSV,3,2,11,15,21,315,39,18,18,270,37,20,12,020,35,23,09,180,33*77"
 // Long: GSV Multipart #3.
-long-gsv-3 := "\$GPGSV,3,3,11,27,05,045,30,30,02,120,28,32,01,250,25*4A"
+LONG-GSV-3 := "\$GPGSV,3,3,11,27,05,045,30,30,02,120,28,32,01,250,25*43"
 
 // Long: Proprietary UBX Nav Solution.
-long-pubx00 := "\$PUBX,00,123519,4807.038,N,01131.000,E,545.4,G3,2.5,3.1,0.0,0.0,0.0,08,0.9,0.0*59"
+LONG-PUBX00 := "\$PUBX,00,123519,4807.038,N,01131.000,E,545.4,G3,2.5,3.1,0.0,0.0,0.0,08,0.9,0.0*5B"
 
 // Long: Proprietary UBX Satellite Status.
-long-pubx03 := "\$PUBX,03,05,07,79,048,42,08,62,308,45,10,51,176,43,13,32,092,41,15,21,315,39,18,18,270,37*2F"
+LONG-PUBX03 := "\$PUBX,03,05,07,79,048,42,08,62,308,45,10,51,176,43,13,32,092,41,15,21,315,39,18,18,270,37*18"
 
 // Weird but valid.
-weird-1 := "\$GPRMC,123519,A,,,,,,230394,,*1C"
+WEIRD-1 := "\$GPRMC,123519,A,,,,,,230394,,*08"
 
 // Lowercase talker: rarely seen, but valid according to the spec.
-weird-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
-
-
-
+WEIRD-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*48"
 
 // BAD:
 
@@ -92,3 +91,41 @@ bad-out-of-order-3 := "\$GPGSV,3,3,11,27,05,045,30*51"
 
 // Partial UBX header, no message
 //\xb5
+
+
+GOOD-LIST ::= {
+  MINIMAL-GLL,
+  SHORT-RMC,
+  MEDIUM-GGA,
+  MEDIUM-VTG,
+  LONG-ZDA,
+  LONG-GSV-1,
+  LONG-GSV-2,
+  LONG-GSV-3,
+  WEIRD-1,
+  WEIRD-2,
+  LONG-PUBX03,
+  LONG-PUBX00,
+}
+
+BAD-LIST ::= {
+  MINIMAL-GLL,
+  SHORT-RMC,
+  MEDIUM-GGA,
+  MEDIUM-VTG,
+  LONG-ZDA,
+  LONG-GSV-1,
+  LONG-GSV-2,
+  LONG-GSV-3,
+  WEIRD-1,
+  WEIRD-2,
+  LONG-PUBX03,
+  LONG-PUBX00,
+}
+
+main:
+  parser := nmea-message.NmeaParser
+  GOOD-LIST.do:
+    print " - Doing $it"
+    test-message := parser.from-string it
+    print test-message

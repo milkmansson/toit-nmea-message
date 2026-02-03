@@ -87,21 +87,29 @@ class NmeaParser:
     if proprietary-messages: add proprietary-messages
 
   from-reader io-reader/io.Reader -> NmeaMessage:
-    if (io-reader.peek-byte 0) != NMEA-MAGIC-BYTE_:
-      throw "$INVALID-NMEA-MESSAGE_: sentence first char not \$"
+    //if (io-reader.peek-byte 0) != NMEA-MAGIC-BYTE_:
+    //  throw "$INVALID-NMEA-MESSAGE_: sentence first char not \$"
 
     // Get full the packet (no size information provided) and verify length limits.
     // Perhaps switch to .read-string --max-size for security?
     sentence/string ::= io-reader.read-line
     //sentence/string ::= io-reader.read-string --max-size=MAX-MESSAGE-SIZE_
 
+    return from-string sentence
+
+  from-string sentence/string --ignore-checksum/bool=false -> NmeaMessage:
+    if sentence[0] != '$':
+      throw "$INVALID-NMEA-MESSAGE_: sentence first char not \$"
+
     if not sentence.contains-only-ascii:
       throw "$INVALID-NMEA-MESSAGE_: sentence not completely ascii"
 
-    // Other checks done this way as they are checks that can be done after
-    // message modification.
-    if not is-valid-sentence_ sentence:
-      throw "$INVALID-NMEA-MESSAGE_: sentence invalid"
+    if not ignore-checksum and not validate-checksum_ sentence:
+      throw "$INVALID-NMEA-MESSAGE_: sentence checksum invalid"
+
+    // Maybe we don't care about this one:
+    //if sentence.size > MAX-MESSAGE-SIZE_:
+    //  throw "$INVALID-NMEA-MESSAGE_: sentence too long"
 
     cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
     end := cs-delimiter == -1 ? sentence.size : cs-delimiter
@@ -148,20 +156,22 @@ class NmeaParser:
         throw "Unknown message type $id"
 
 
-  static is-valid-sentence_ sentence/string -> bool:
-    // Check the payload length.
-    if sentence.size > MAX-MESSAGE-SIZE_:
-      return false
-
-    // Check checksum.
+  /**
+  Validates the message is valid against it's checksum.
+  */
+  static validate-checksum_ sentence/string -> bool:
     cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
-    if cs-delimiter == -1 :
-      // Checksum missing (allowed in spec).
-      return true
 
+    // If checksum is missing, return a pass. (No CS is allowed in the spec).
+    if cs-delimiter == -1 : return true
+
+    // Get the text being checksummed [$..*] (exclusive).
     message := sentence[1..cs-delimiter]
+
+    // Retrieve text after the * and parse as hex.
     checksum := int.parse (sentence[(cs-delimiter+1)..])  --radix=16
 
+    // Compare and return.
     return (compute-checksum_ message) == checksum
 
   /**
@@ -474,48 +484,60 @@ class Rmc extends NmeaMessage:
   constructor.private_ .talker/string id/string payload/List:
     super.private_ talker id payload
 
-  time-utc -> string:
-    return payload[1]
+  //time-utc -> Time?:
+  //  return Time.parse payload[1] --if-error=: null
 
   status -> string:
     return payload[2]
 
-  latitude -> float:
-    return float.parse payload[3]
+  latitude -> float?:
+    return float.parse payload[3] --if-error=: null
 
   latitude-n -> string:
     return payload[4]
 
-  longitude -> float:
-    return float.parse payload[5]
+  longitude -> float?:
+    return float.parse payload[5] --if-error=: null
 
   longitude-e -> string:
     return payload[6]
 
-  speed-kts -> float:
-    return float.parse payload[7] //--if-error=: 0.0
+  speed-kts -> float?:
+    return float.parse payload[7] --if-error=: null
 
   /** Course Over Ground. */
-  course -> float:
-    return float.parse payload[8]
+  course -> float?:
+    return float.parse payload[8] --if-error=: null
 
-  positioning-mode -> string:
-    return payload[12]
+  positioning-mode -> string?:
+    if payload.size >= 13 and payload[12] != "":
+      return payload[12]
+    return null
 
   time -> Time:
+    year := payload[9] != "" ? (int.parse (payload[9])[4..6]) : 0
+    month := payload[9] != "" ? (int.parse (payload[9])[2..4]) : 0
+    day := payload[9] != "" ? (int.parse (payload[9])[0..2]) : 0
+    hour := int.parse (payload[1])[0..2]
+    minute := int.parse (payload[1])[2..4]
+    second := int.parse (payload[1])[4..6]
+    ms := (payload[1].index-of ".") > -1 ? (int.parse payload[1][7..]) : 0
     return Time.utc
-      --year=(int.parse (payload[9])[4..6])
-      --month=(int.parse (payload[9])[2..4])
-      --day=(int.parse (payload[9])[0..2])
-      --h=(int.parse (payload[1])[0..2])
-      --m=(int.parse (payload[1])[2..4])
-      --s=(int.parse (payload[1])[4..6])
-      --ms=(int.parse (payload[1])[7..])
+      --year=year
+      --month=month
+      --day=day
+      --h=hour
+      --m=minute
+      --s=second
+      --ms=ms
 
   stringify -> string:
-    if status == STATUS-DATA-INVALID:
-      return "$super: status:$(STATUS-LOOKUP_[status])"
-    return  "$super: status:$(STATUS-LOOKUP_[status])|mode:$POS-MODE-LOOKUP_[positioning-mode]|$time|....."
+    output := ["$super: "]
+    output.add "status:$(STATUS-LOOKUP_[status])"
+    if status == "V": return output.join ""
+    if positioning-mode != null: output.add "|mode:$(POS-MODE-LOOKUP_[positioning-mode])"
+    output.add "time:$time"
+    return output.join ""
 
 /**
 GLL: Geographic position (lat/lon + time + status).
@@ -592,13 +614,18 @@ class Gll extends NmeaMessage:
   status -> string:
     return payload[6]
 
-  positioning-mode -> string:
-    return payload[7]
+  /** Positioning Mode. (NMEA2.3 or later.) */
+  positioning-mode -> string?:
+    if payload.size >= 8 and payload[7] != "":
+      return payload[7]
+    return null
 
   stringify -> string:
-    if status == "V":
-      return "$super: $(STATUS-LOOKUP_[status])"
-    return  "$super: status:$STATUS-LOOKUP_[status]|mode:$POSITION-MODE-LOOKUP_[positioning-mode]|....."
+    output := ["$super: "]
+    output.add "status:$(STATUS-LOOKUP_[status])"
+    if status == "V": return output.join ""
+    if positioning-mode != null: output.add "|mode:$(POSITION-MODE-LOOKUP_[positioning-mode])"
+    return output.join ""
 
 /**
 GSA: GNSS DOP and Active Satellites used including fix type (2D/3D).
