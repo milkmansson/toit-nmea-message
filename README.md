@@ -132,10 +132,10 @@ the device when using a UBLOX device.
 
 > [!WARNING]
 > The driver aims to have the widest capability.  For example, if you have a
-> clone device that supports fewer options, the driver may allow options
-> that your device may not practically support.  (eg, the interface may allow a
-> baud rate in a configuration message that your device does not allow.)
-> Check your datasheet when coding configurations.
+> clone device that supports fewer options, the driver will not know and will
+> likely allow options that your device may not practically support.  (eg, the
+> interface may allow a baud rate in a configuration message that your device
+> does not allow.)  Check your datasheet when coding configurations.
 
 ## Caveats
 Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
