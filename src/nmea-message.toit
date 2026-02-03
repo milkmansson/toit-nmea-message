@@ -120,41 +120,26 @@ class NmeaParser:
     if first-comma < 4 or first-comma == -1 or second-comma == -1:
       throw "$INVALID-NMEA-MESSAGE_: malformed header/body"
 
-    // Type-1 message IDs - types (Casic, Garmin) whose message IDs are held in
-    // the first field only. (eg, Message ID definition goes to first comma.)
     type/string := sentence[1..first-comma].to-ascii-upper
-
-    talker/string := ?
     id/string := ?
-    if type[0] == 'P':
-      // Type 1 Message handling:
-      talker = "P"
-      id = type[1..]
-      if registry_.contains id:
-        return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
 
-      // Message is a P, but must be type 2: message ID information goes to
-      // second comma. Type-2 message IDs (eg uBlox, SiRF) have message IDs
-      // that also use the next field. (eg, Message ID definition goes to second
-      // comma.)
-      type = sentence[1..second-comma].to-ascii-upper
+    // Looks for sentences $..XXXX,
+    id = type[2..]
+    if registry_.contains id:
+      return registry_[id].call type[0..2] id (sentence[1..end].split DELIMITER_)
 
-      id = type[1..]
-      if registry_.contains id:
-        return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
+    // Looks for Type 1 sentences $PXXXX, message ID goes to first comma:
+    id = type[1..]
+    if registry_.contains id:
+      return registry_[id].call type[0..1] id (sentence[1..end].split DELIMITER_)
 
-      throw "Unknown proprietary message type '$id'"
+    // Looks for Type-2 sentences $PXXXX,XX, message ID goes to second comma:
+    type = sentence[1..second-comma].to-ascii-upper
+    id = type[0..]
+    if registry_.contains id:
+      return registry_[id].call type[0..1] id (sentence[1..end].split DELIMITER_)
 
-    else:
-      // Message must be an NMEA native message:
-      talker = type[0..2]
-      id = type[2..]
-
-      if registry_.contains id:
-        return registry_[id].call talker id (sentence[1..end].split DELIMITER_)
-      else:
-        throw "Unknown message type $id"
-
+    throw "Unknown message type '$id'"
 
   /**
   Validates the message is valid against it's checksum.

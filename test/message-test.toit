@@ -105,8 +105,8 @@ GOOD-LIST ::= {
   LONG-GSV-3,
   WEIRD-1,
   WEIRD-2,
-  LONG-PUBX03,
   LONG-PUBX00,
+  LONG-PUBX03,
 }
 
 BAD-LIST ::= {
@@ -129,16 +129,18 @@ main:
   nmea-parser := NmeaParser
   nmea-parser.add NmeaUbxParser.MESSAGES
 
-  print nmea-parser.registry
+  print nmea-parser.registry.keys
 
   GOOD-LIST.do:
     print " - Doing $it"
 
-    // Test that item parses OK:
+    // Test that item parses OK:  (Why doesn't this work??)
     //expect-no-throw : test-message := nmea-parser.from-string it
-
-    expect-no-throw : y := 3 * 5
 
     // Test the test sentences convert to a message and then back to a sentence:
     test-message := nmea-parser.from-string it
     expect-identical it test-message.to-string
+
+  BAD-LIST.do:
+    print " - Doing $it"
+    test-message := nmea-parser.from-string it
