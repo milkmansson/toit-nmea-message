@@ -175,12 +175,12 @@ class NmeaParser:
     input-map.keys.do: | id |
       registry_[id] = input-map[id]
 
-  message-count -> int:
-    return registry_.size
-
   /**
-  Shows the content of the NMEA message registry.  (Troubleshooting purpose only)
-  */
+  Shows the content of the NMEA message registry.  (For troubleshooting purposes.)
+
+  To show message types known in registry: `registry.keys`
+  To count message types in registry: `registry.size`
+    */
   registry -> Map:
     return registry_
 
