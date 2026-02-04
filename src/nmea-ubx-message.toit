@@ -17,9 +17,9 @@ Support for the binary UBX protocol is given in a different driver.
 
 class NmeaUbxParser:
   static MESSAGES/Map := {
-    "P$Ubx00.ID": :: | talker id payload | Ubx00.private_ talker id payload,
-    "P$Ubx03.ID": :: | talker id payload | Ubx03.private_ talker id payload,
-    "P$Ubx04.ID": :: | talker id payload | Ubx04.private_ talker id payload,
+    "P$Ubx00.ID": :: | talker payload | Ubx00.private_ payload,
+    "P$Ubx03.ID": :: | talker payload | Ubx03.private_ payload,
+    "P$Ubx04.ID": :: | talker payload | Ubx04.private_ payload,
   }
 
 
@@ -50,11 +50,11 @@ class Ubx00 extends NmeaMessage:
 
   /** Message content asks the receiver for a UBX00 with data. */
   constructor.poll:
-    super.private_ "P" ID ["PUBX","$ID"]
+    super.private_ "P" ["PUBX","$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_ "P" ID payload
+  constructor.private_ payload/List:
+    super.private_ "P" payload
 
   is-poll -> bool:
     return payload_.size < 3
@@ -121,10 +121,10 @@ class Ubx03 extends NmeaMessage:
 
   /** Message content asks the receiver for a UBX03 with data. */
   constructor.poll:
-    super.private_ "P" ID ["PUBX","03"]
+    super.private_ "P" ["PUBX","03"]
 
-  constructor.private_ talker/string id/string payload/List:
-    super.private_ "P" ID payload
+  constructor.private_ payload/List:
+    super.private_ "P" payload
 
   is-poll -> bool:
     return payload_.size < 3
@@ -146,8 +146,8 @@ class Ubx04 extends NmeaMessage:
   static ID ::= "UBX,04"
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
 
 /**
@@ -185,10 +185,10 @@ class Ubx40 extends NmeaMessage:
     fields[FIELD-USB_] = usb-rate ? usb-rate : ""
     fields[FIELD-SPI_] = spi-rate ? spi-rate : ""
     fields[8] = "0"
-    super.private_ "P" ID fields
+    super.private_ "P" fields
 
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   type -> string:
     return payload_[2]

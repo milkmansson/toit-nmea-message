@@ -14,8 +14,8 @@ Garmin receivers using the NMEA Protocol support proprietary NMEA messages,
 
 class NmeaGarminParser:
   static MESSAGES/Map := {
-    "P$Grmf.ID": :: | talker id payload | Grmf.private_ talker id payload,
-    "P$Grme.ID": :: | talker id payload | Grme.private_ talker id payload,
+    "P$Grmf.ID": :: | talker payload | Grmf.private_ payload,
+    "P$Grme.ID": :: | talker payload | Grme.private_ payload,
   }
 
 /**
@@ -25,11 +25,11 @@ class Grmf extends NmeaMessage:
   static ID ::= "GRMF"
 
   constructor:
-    super.private_ "P" ID ["P$ID"]
+    super.private_ "P" ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
 /**
 GRME: Time/clock information.
@@ -38,8 +38,8 @@ class Grme extends NmeaMessage:
   static ID ::= "GRME"
 
   constructor:
-    super.private_ "P" ID ["P$ID"]
+    super.private_ "P" ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload

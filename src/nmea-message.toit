@@ -71,16 +71,17 @@ class NmeaParser:
 
   // Type Registry:
   registry_/Map := {
-    Rmc.ID: :: | talker id payload | Rmc.private_ talker id payload,
-    Gsa.ID: :: | talker id payload | Gsa.private_ talker id payload,
-    Gsv.ID: :: | talker id payload | Gsv.private_ talker id payload,
-    Vtg.ID: :: | talker id payload | Vtg.private_ talker id payload,
-    Txt.ID: :: | talker id payload | Txt.private_ talker id payload,
-    Gga.ID: :: | talker id payload | Gga.private_ talker id payload,
-    Zda.ID: :: | talker id payload | Zda.private_ talker id payload,
-    Gll.ID: :: | talker id payload | Gll.private_ talker id payload,
-    Gns.ID: :: | talker id payload | Gns.private_ talker id payload,
-    Gbs.ID: :: | talker id payload | Gbs.private_ talker id payload,
+    Rmc.ID: :: | talker payload | Rmc.private_ talker payload,
+    Gsa.ID: :: | talker payload | Gsa.private_ talker payload,
+    Gsv.ID: :: | talker payload | Gsv.private_ talker payload,
+    Vtg.ID: :: | talker payload | Vtg.private_ talker payload,
+    Txt.ID: :: | talker payload | Txt.private_ talker payload,
+    Gga.ID: :: | talker payload | Gga.private_ talker payload,
+    Zda.ID: :: | talker payload | Zda.private_ talker payload,
+    Gll.ID: :: | talker payload | Gll.private_ talker payload,
+    Gns.ID: :: | talker payload | Gns.private_ talker payload,
+    Gbs.ID: :: | talker payload | Gbs.private_ talker payload,
+    Mss.ID: :: | talker payload | Mss.private_ talker payload,
   }
 
   constructor --proprietary-messages/Map?=null:
@@ -126,18 +127,18 @@ class NmeaParser:
     // Looks for sentences $..XXXX,
     id = type[2..]
     if registry_.contains id:
-      return registry_[id].call type[0..2] id (sentence[1..end].split DELIMITER_)
+      return registry_[id].call type[0..2] (sentence[1..end].split DELIMITER_)
 
     // Looks for Type 1 sentences $PXXXX, message ID goes to first comma:
     id = type[1..]
     if registry_.contains id:
-      return registry_[id].call type[0..1] id (sentence[1..end].split DELIMITER_)
+      return registry_[id].call type[0..1] (sentence[1..end].split DELIMITER_)
 
     // Looks for Type-2 sentences $PXXXX,XX, message ID goes to second comma:
     type = sentence[1..second-comma].to-ascii-upper
     id = type[0..]
     if registry_.contains id:
-      return registry_[id].call type[0..1] id (sentence[1..end].split DELIMITER_)
+      return registry_[id].call type[0..1] (sentence[1..end].split DELIMITER_)
 
     throw "Unknown message type '$id'"
 
@@ -187,15 +188,14 @@ class NmeaParser:
 
 abstract class NmeaMessage:
   static ID ::= "NONE"
-  talker_/string
-  id_/string
+  talker/string
   payload_/List
 
-  constructor.private_ .talker_/string .id_/string .payload_/List:
+  constructor.private_ .talker/string .payload_/List:
 
   /** Whether this message is a poll. */
   is-poll -> bool:
-    return id_ == ID
+    return payload_.size <= 2
 
   /** Whether this message is multipart. */
   is-multipart -> bool:
@@ -213,11 +213,11 @@ abstract class NmeaMessage:
 
   /** See $super. */
   stringify -> string:
-    return "NMEA-$talker_-$id_"
+    return "NMEA-$talker-$ID"
 
   /** Full Message Name. */
   full-name -> string:
-    return "NMEA-$talker_-$id_"
+    return "NMEA-$talker-$ID"
 
   /** Provides access to raw data in all fields (parsed or not). */
   raw -> List:
@@ -239,7 +239,6 @@ Message is always emitted with the first cells showing multipart data (even if
 */
 class Txt extends NmeaMessage:
   static ID ::= "TXT"
-  talker/string := ?
 
   static ERROR ::= 0   // Error information.
   static WARN ::= 1    // Warning message.
@@ -252,8 +251,8 @@ class Txt extends NmeaMessage:
     USER: "User"
   }
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   is-multipart -> bool:
     return (int.parse payload_[1]) >= 2
@@ -280,7 +279,6 @@ Includes time, lat/lon, fix quality, number of sats used, HDOP, altitude, geoid
 */
 class Gga extends NmeaMessage:
   static ID ::= "GGA"
-  talker/string := ?
 
   static QUALITY-NO-FIX ::= 0
   static QUALITY-AUTONOMOUS-GNSS-FIX ::= 1
@@ -293,13 +291,11 @@ class Gga extends NmeaMessage:
     QUALITY-ESTIMATE-GNSS-FIX: "Estimate/Dead Reckoning Fix",
   }
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   utc-string -> string:
     return payload_[1]
@@ -350,15 +346,12 @@ ZDA: Date & time + local zone offset. (Some data also visible from RMC.)
 */
 class Zda extends NmeaMessage:
   static ID ::= "ZDA"
-  talker/string := ?
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   lz-hours -> int:
     return int.parse payload_[5]
@@ -386,7 +379,6 @@ VTG: Course Over Ground and Ground Speed (true/magnetic track + speed in knots/k
 */
 class Vtg extends NmeaMessage:
   static ID ::= "VTG"
-  talker/string := ?
 
   static POS-MODE-AUTONOMOUS ::= "A"
   static POS-MODE-ESTIMATION ::= "E"
@@ -403,13 +395,11 @@ class Vtg extends NmeaMessage:
     POS-MODE-MANUAL: "Manual"
   }
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   true-course -> float?:
     return float.parse payload_[1] --if-error=: 0.0
@@ -443,7 +433,6 @@ RMC: Time, date, lat/lon, speed over ground, course over ground, status.
 */
 class Rmc extends NmeaMessage:
   static ID ::= "RMC"
-  talker/string := ?
 
   static STATUS-DATA-VALID ::= "A"
   static STATUS-DATA-INVALID ::= "V"
@@ -467,13 +456,11 @@ class Rmc extends NmeaMessage:
     POS-MODE-MANUAL: "Manual"
   }
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   timestamp -> string?:
     if payload_[1] == "": return null
@@ -538,7 +525,6 @@ Some data is also visible in RMC/GGA.
 */
 class Gll extends NmeaMessage:
   static ID ::= "GLL"
-  talker/string := ?
 
   static STATUS-DATA-VALID ::= "A"
   static STATUS-DATA-INVALID ::= "V"
@@ -579,13 +565,11 @@ class Gll extends NmeaMessage:
     POSITION-MODE-RTK-FIXED: "RTK Fixed",
   }
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   latitude -> float:
     return float.parse payload_[1]
@@ -632,7 +616,6 @@ Multiple messages may be reported if multiple systems are used for the current
 */
 class Gsa extends NmeaMessage:
   static ID ::= "GSA"
-  talker/string := ?
 
   static OPERATION-MODE-FIXED ::= "M"      // M=2D/3D Fixed
   static OPERATION-AUTO-SWITCHING ::= "A"  // A=2D/3D Auto-Switching
@@ -664,13 +647,11 @@ class Gsa extends NmeaMessage:
     SYSTEM-ID-QZSS: "QZSS"
   }
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   operation-mode -> string:
     return payload_[1]
@@ -731,15 +712,12 @@ Some manufacturers will produce several messages, with different talker ID's to
 */
 class Gsv extends NmeaMessage:
   static ID ::= "GSV"
-  talker/string := ?
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   is-multipart -> bool:
     return true
@@ -799,7 +777,6 @@ This message type is similar to GGA but used for multi-constellation fixes.
 */
 class Gns extends NmeaMessage:
   static ID ::= "GNS"
-  talker/string := ?
 
   static QUALITY-NO-FIX ::= 0
   static QUALITY-AUTONOMOUS-GNSS-FIX ::= 1
@@ -812,13 +789,11 @@ class Gns extends NmeaMessage:
     QUALITY-ESTIMATE-GNSS-FIX: "Estimate/Dead Reckoning Fix",
   }
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   timestamp -> string?:
     if payload_[1] == "": return null
@@ -896,15 +871,12 @@ The fields prob, bias and stdev are only output if at least one satellite
 */
 class Gbs extends NmeaMessage:
   static ID ::= "GBS"
-  talker/string := ?
 
-  constructor.poll:
-    talker = NmeaParser.GPS
-    msgid := "Q"
-    super.private_ talker msgid ["$talker$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
-  constructor.private_ .talker/string id/string payload/List:
-    super.private_ talker id payload
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
 
   /**
   Returns UTC timestamp of the message.
@@ -976,3 +948,43 @@ class Gbs extends NmeaMessage:
   */
   standard-deviation -> float?:
     return float.parse payload_[8] --if-error=: null
+
+
+
+/**
+MSS: MSK Beacon Signal Status.
+
+Report on the status and quality of a DGPS radiobeacon signal.  The message
+  exists to support legacy differential GNSS (DGPS/radiobeacon) systems.  Many
+  modern GNSS modules either ignore these or implement stubs.
+*/
+class Mss extends NmeaMessage:
+  static ID ::= "MSS"
+
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
+
+  constructor.private_ talker/string payload/List:
+    super.private_ talker payload
+
+  signal-strength -> float?:
+    return float.parse payload_[1] --if-error=: null
+
+  signal-to-noise-ratio -> float?:
+    return float.parse payload_[2] --if-error=: null
+
+  beacon-frequency -> float?:
+    return float.parse payload_[3] --if-error=: null
+
+  beacon-bit-rate -> int?:
+    return int.parse payload_[4] --if-error=: null
+
+  channel-number -> int?:
+    return int.parse payload_[5] --if-error=: null
+
+  stringify -> string:
+    output := []
+    if signal-strength: output.add "signal-strength:$(signal-strength)db"
+    if beacon-frequency: output.add "beacon-frequency:$(beacon-frequency)kHz"
+    if channel-number: output.add "channel-number:$(channel-number)"
+    return  "$super: $(output.join ":")"

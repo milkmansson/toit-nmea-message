@@ -16,18 +16,18 @@ Support for the CASIC Standard Interface Protocol (CSIP) binary protocol is
 
 class NmeaCasicParser:
   static MESSAGES/Map := {
-    "P$Cas00.ID": :: | talker id payload | Cas00.private_ talker id payload,
-    "P$Cas01.ID": :: | talker id payload | Cas01.private_ talker id payload,
-    "P$Cas02.ID": :: | talker id payload | Cas02.private_ talker id payload,
-    "P$Cas03.ID": :: | talker id payload | Cas03.private_ talker id payload,
-    "P$Cas04.ID": :: | talker id payload | Cas04.private_ talker id payload,
-    "P$Cas05.ID": :: | talker id payload | Cas05.private_ talker id payload,
-    "P$Cas06.ID": :: | talker id payload | Cas06.private_ talker id payload,
-    "P$Cas10.ID": :: | talker id payload | Cas10.private_ talker id payload,
-    //"P$Cas12.ID": :: | talker id payload | Cas12.private_ talker id payload,
-    //"P$Cas15.ID": :: | talker id payload | Cas15.private_ talker id payload,
-    //"P$Cas20.ID": :: | talker id payload | Cas20.private_ talker id payload,
-    "P$Cas60.ID": :: | talker id payload | Cas60.private_ talker id payload,
+  //  "P$Cas00.ID": :: | talker payload | Cas00.private_ payload,
+    "P$Cas01.ID": :: | talker payload | Cas01.private_ payload,
+    "P$Cas02.ID": :: | talker payload | Cas02.private_ payload,
+    "P$Cas03.ID": :: | talker payload | Cas03.private_ payload,
+    "P$Cas04.ID": :: | talker payload | Cas04.private_ payload,
+    "P$Cas05.ID": :: | talker payload | Cas05.private_ payload,
+    "P$Cas06.ID": :: | talker payload | Cas06.private_ payload,
+    "P$Cas10.ID": :: | talker payload | Cas10.private_ payload,
+    //"P$Cas12.ID": :: | talker payload | Cas12.private_ payload,
+    //"P$Cas15.ID": :: | talker payload | Cas15.private_ payload,
+    //"P$Cas20.ID": :: | talker payload | Cas20.private_ payload,
+    "P$Cas60.ID": :: | talker payload | Cas60.private_ payload,
   }
 
 /**
@@ -37,11 +37,11 @@ class Cas00 extends NmeaMessage:
   static ID ::= "CAS00"
 
   constructor:
-    super.private_ "P" ID ["P$ID"]
+    super.private_ "P" ["P$ID"]
 
-  /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  // No Private constructor, no messages of this type are emitted.
+  //constructor.private_ payload/List:
+  //  super.private_  "P" payload
 
 /**
 CAS02: Set Baud Rate.
@@ -66,11 +66,11 @@ class Cas01 extends NmeaMessage:
 
   constructor.set baudrate/int:
     assert: BAUD-LOOKUP_.contains baudrate
-    super.private_ "P" ID ["P$ID", baudrate]
+    super.private_ "P" ["P$ID", baudrate]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
 /**
 CAS02: Set positioning update rate.
@@ -95,11 +95,11 @@ class Cas02 extends NmeaMessage:
 
   constructor.set rate/int:
     assert: OUTPUT-RATE-LOOKUP_.contains rate
-    super.private_ "P" ID ["P$ID", rate]
+    super.private_ "P" ["P$ID", rate]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   stringify -> string:
     return  "$super: rate:$OUTPUT-RATE-LOOKUP_[payload_[1]]"
@@ -120,8 +120,8 @@ Message type supports v3.6 or v4.2 specification. Simply specifying any of the
 */
 class Cas03 extends NmeaMessage:
   static ID ::= "CAS03"
-  static PAYLOAD-SIZE_ ::= 9
-  static PAYLOAD-SIZE-EXTENDED_ ::= 19
+  static PAYLOAD-SIZE-36_ ::= 9
+  static PAYLOAD-SIZE-42_ ::= 19
 
   // Fields for v3.6 specification:
   static TYPE-GGA ::= 1
@@ -171,11 +171,9 @@ class Cas03 extends NmeaMessage:
       --utc/int?=null
       --gst/int?=null
       --tim/int?=null:
-    payload-size := PAYLOAD-SIZE_
-    if dhv or lps or utc or gst or tim:
-      payload-size = PAYLOAD-SIZE-EXTENDED_
-    super.private_ "P" ID (List payload-size)
-    payload_[0] = "$talker_$ID"
+    payload-size := dhv or lps or utc or gst or tim ? PAYLOAD-SIZE-42_ : PAYLOAD-SIZE-36_
+    super.private_ "P" (List payload-size)
+    payload_[0] = "P$ID"
     payload_[TYPE-GGA] = gga or ""
     payload_[TYPE-GLL] = gll or ""
     payload_[TYPE-GSA] = gsa or ""
@@ -185,16 +183,16 @@ class Cas03 extends NmeaMessage:
     payload_[TYPE-ZDA] = zda or ""
     payload_[TYPE-TXT] = txt or ""
 
-    if payload_.size == PAYLOAD-SIZE-EXTENDED_:
+    if is-extended:
       payload_[TYPE-DHV] = dhv or ""
       payload_[TYPE-LPS] = lps or ""
       payload_[TYPE-UTC] = utc or ""
       payload_[TYPE-GST] = gst or ""
       payload_[TYPE-TIM] = tim or ""
 
-  constructor.private_ talker/string id/string payload/List:
-    assert: payload.size == PAYLOAD-SIZE_ or payload.size == PAYLOAD-SIZE-EXTENDED_
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    assert: payload.size == PAYLOAD-SIZE-36_ or payload.size == PAYLOAD-SIZE-42_
+    super.private_  "P" payload
 
   gga-rate -> int: return payload_[TYPE-GGA]
   gll-rate -> int: return payload_[TYPE-GLL]
@@ -211,7 +209,7 @@ class Cas03 extends NmeaMessage:
   tim-rate -> int?: return is-extended ? payload_[TYPE-TIM] : ""
 
   is-extended -> bool:
-    return payload_.size == PAYLOAD-SIZE-EXTENDED_
+    return payload_.size == PAYLOAD-SIZE-42_
 
   stringify -> string:
     out := List 0
@@ -245,11 +243,11 @@ class Cas04 extends NmeaMessage:
 
   constructor.set --mask/int:
     assert: 0 <= mask <= 31
-    super.private_ "P" ID ["P$ID", mask]
+    super.private_ "P" ["P$ID", mask]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   is-gps-enabled -> bool:
     return (payload_[1] & GPS) != 0
@@ -294,11 +292,11 @@ class Cas05 extends NmeaMessage:
 
   constructor.set --mode/int:
     assert: MODE-LOOKUP_.contains mode
-    super.private_ "P" ID ["P$ID", mode]
+    super.private_ "P" ["P$ID", mode]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   stringify -> string:
     return  "$super: mode:$(MODE-LOOKUP_[payload_[1]])"
@@ -330,17 +328,15 @@ class Cas06 extends NmeaMessage:
     INFO-UPGRADE-CODE: "Upgrade",
   }
 
-  constructor.poll:
-    msgid := "Q"
-    super.private_  NmeaParser.GPS msgid ["$NmeaParser.GPS$msgid",ID]
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker ["$(talker)Q",ID]
 
   constructor.set info-type/int:
     assert: INFO-LOOKUP_.contains info-type
-    super.private_ "P" ID ["P$ID", info-type]
+    super.private_ "P" ["P$ID", info-type]
 
-  /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   info-type -> int:
     return int.parse payload_[1]
@@ -371,11 +367,11 @@ class Cas10 extends NmeaMessage:
 
   constructor.set start-type/int:
     assert: START-LOOKUP_.contains start-type
-    super.private_ "P" ID ["P$ID", start-type]
+    super.private_ "P" ["P$ID", start-type]
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   start-type -> int:
     return int.parse payload_[1]
@@ -393,7 +389,7 @@ class Cas12 extends NmeaMessage:
 
   constructor.poll --seconds/int:
     assert: 0 < seconds <= 65535
-    super.private_ "P" ID ["P$ID", "$seconds"]
+    super.private_ "P" ["P$ID", "$seconds"]
 
   seconds -> int:
     return int.parse payload_[1]
@@ -416,8 +412,8 @@ class Cas60 extends NmeaMessage:
   static ID ::= "CAS60"
 
   /** Not expected - leaving here until test of this function. */
-  constructor.private_ talker/string id/string payload/List:
-    super.private_  "P" ID payload
+  constructor.private_ payload/List:
+    super.private_  "P" payload
 
   time -> Time:
     return Time.utc
