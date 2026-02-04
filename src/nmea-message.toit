@@ -187,15 +187,15 @@ class NmeaParser:
 
 abstract class NmeaMessage:
   static ID ::= "NONE"
-  talker/string
-  id/string
-  payload/List
+  talker_/string
+  id_/string
+  payload_/List
 
-  constructor.private_ .talker/string .id/string .payload/List:
+  constructor.private_ .talker_/string .id_/string .payload_/List:
 
   /** Whether this message is a poll. */
   is-poll -> bool:
-    return id == ID
+    return id_ == ID
 
   /** Whether this message is multipart. */
   is-multipart -> bool:
@@ -213,19 +213,19 @@ abstract class NmeaMessage:
 
   /** See $super. */
   stringify -> string:
-    return "NMEA-$talker-$id"
+    return "NMEA-$talker_-$id_"
 
   /** Full Message Name. */
   full-name -> string:
-    return "NMEA-$talker-$id"
+    return "NMEA-$talker_-$id_"
 
   /** Provides access to raw data in all fields (parsed or not). */
   raw -> List:
-    return payload
+    return payload_
 
   /** Used to create the ASCII sentence for sending on the wire. */
   to-string -> string:
-    outstring := payload.join ","
+    outstring := payload_.join ","
     checksum := NmeaParser.compute-checksum_ outstring
     checksum-string := "$(%02x checksum)".to-ascii-upper
     return "\$$outstring*$checksum-string"
@@ -256,16 +256,16 @@ class Txt extends NmeaMessage:
     super.private_ talker id payload
 
   is-multipart -> bool:
-    return (int.parse payload[1]) >= 2
+    return (int.parse payload_[1]) >= 2
 
   message-part -> List:
-    return [int.parse payload[2], int.parse payload[1]]
+    return [int.parse payload_[2], int.parse payload_[1]]
 
   type -> int:
-    return int.parse payload[3]
+    return int.parse payload_[3]
 
   text -> string:
-    return payload[4]
+    return payload_[4]
 
   stringify -> string:
     if is-multipart:
@@ -302,43 +302,43 @@ class Gga extends NmeaMessage:
     super.private_ talker id payload
 
   utc-string -> string:
-    return payload[1]
+    return payload_[1]
 
   latitude -> float:
-    return float.parse payload[2]
+    return float.parse payload_[2]
 
   latitude-n -> string:
-    return payload[3]
+    return payload_[3]
 
   longitude -> float:
-    return float.parse payload[4]
+    return float.parse payload_[4]
 
   longitude-e -> string:
-    return payload[5]
+    return payload_[5]
 
   fix-quality -> int:
-    return int.parse payload[6]
+    return int.parse payload_[6]
 
   is-fix-valid -> bool:
     return fix-quality > QUALITY-NO-FIX
 
   /** Number of satellites in the message. */
   satellite-count -> int:
-    return int.parse payload[7]
+    return int.parse payload_[7]
 
   /** Altitude */
   altitude -> float:
-    return float.parse payload[9]
+    return float.parse payload_[9]
 
   altitude-unit -> string:
-    return payload[10]
+    return payload_[10]
 
   /** Geoidal Height */
   geoidal-height -> float:
-    return float.parse payload[11]
+    return float.parse payload_[11]
 
   geoidal-height-unit -> string:
-    return payload[12]
+    return payload_[12]
 
   stringify -> string:
     if not is-fix-valid:
@@ -361,22 +361,22 @@ class Zda extends NmeaMessage:
     super.private_ talker id payload
 
   lz-hours -> int:
-    return int.parse payload[5]
+    return int.parse payload_[5]
 
   lz-minutes -> int:
-    //print "parsing '$payload[6]'"
-    return int.parse payload[6]
+    //print "parsing '$payload_[6]'"
+    return int.parse payload_[6]
 
   /** Time provided by GNSS. */
   time -> Time:
     return Time.utc
-      --year=(int.parse payload[4])
-      --month=(int.parse payload[3])
-      --day=(int.parse payload[2])
-      --h=(int.parse (payload[1])[0..2])
-      --m=(int.parse (payload[1])[2..4])
-      --s=(int.parse (payload[1])[4..6])
-      --ms=(int.parse (payload[1])[7..])
+      --year=(int.parse payload_[4])
+      --month=(int.parse payload_[3])
+      --day=(int.parse payload_[2])
+      --h=(int.parse (payload_[1])[0..2])
+      --m=(int.parse (payload_[1])[2..4])
+      --s=(int.parse (payload_[1])[4..6])
+      --ms=(int.parse (payload_[1])[7..])
 
   stringify -> string:
     return  "$super: $time+$(%02b lz-hours):$(%02b lz-minutes)"
@@ -412,23 +412,23 @@ class Vtg extends NmeaMessage:
     super.private_ talker id payload
 
   true-course -> float?:
-    return float.parse payload[1] --if-error=: 0.0
+    return float.parse payload_[1] --if-error=: 0.0
 
   magnetic-course -> float:
-    return float.parse payload[3] --if-error=: 0.0
+    return float.parse payload_[3] --if-error=: 0.0
 
   speed-kmh -> float:
     //print "KMH PARSING $payload"
-    return float.parse payload[7] --if-error=: 0.0
+    return float.parse payload_[7] --if-error=: 0.0
 
   speed-kts -> float:
-    //print "KMH PARSING $payload[7]"
-    return float.parse payload[5] --if-error=: 0.0
+    //print "KMH PARSING $payload_[7]"
+    return float.parse payload_[5] --if-error=: 0.0
 
   /** Value in NMEA v2.3 or later. */
   positioning-mode -> string?:
-    if payload.size >= 10:
-      return payload[9]
+    if payload_.size >= 10:
+      return payload_[9]
     return null
 
   stringify -> string:
@@ -476,43 +476,43 @@ class Rmc extends NmeaMessage:
     super.private_ talker id payload
 
   //time-utc -> Time?:
-  //  return Time.parse payload[1] --if-error=: null
+  //  return Time.parse payload_[1] --if-error=: null
 
   status -> string:
-    return payload[2]
+    return payload_[2]
 
   latitude -> float?:
-    return float.parse payload[3] --if-error=: null
+    return float.parse payload_[3] --if-error=: null
 
   latitude-n -> string:
-    return payload[4]
+    return payload_[4]
 
   longitude -> float?:
-    return float.parse payload[5] --if-error=: null
+    return float.parse payload_[5] --if-error=: null
 
   longitude-e -> string:
-    return payload[6]
+    return payload_[6]
 
   speed-kts -> float?:
-    return float.parse payload[7] --if-error=: null
+    return float.parse payload_[7] --if-error=: null
 
   /** Course Over Ground. */
   course -> float?:
-    return float.parse payload[8] --if-error=: null
+    return float.parse payload_[8] --if-error=: null
 
   positioning-mode -> string?:
-    if payload.size >= 13 and payload[12] != "":
-      return payload[12]
+    if payload_.size >= 13 and payload_[12] != "":
+      return payload_[12]
     return null
 
   time -> Time:
-    year := payload[9] != "" ? (int.parse (payload[9])[4..6]) : 0
-    month := payload[9] != "" ? (int.parse (payload[9])[2..4]) : 0
-    day := payload[9] != "" ? (int.parse (payload[9])[0..2]) : 0
-    hour := int.parse (payload[1])[0..2]
-    minute := int.parse (payload[1])[2..4]
-    second := int.parse (payload[1])[4..6]
-    ms := (payload[1].index-of ".") > -1 ? (int.parse payload[1][7..]) : 0
+    year := payload_[9] != "" ? (int.parse (payload_[9])[4..6]) : 0
+    month := payload_[9] != "" ? (int.parse (payload_[9])[2..4]) : 0
+    day := payload_[9] != "" ? (int.parse (payload_[9])[0..2]) : 0
+    hour := int.parse (payload_[1])[0..2]
+    minute := int.parse (payload_[1])[2..4]
+    second := int.parse (payload_[1])[4..6]
+    ms := (payload_[1].index-of ".") > -1 ? (int.parse payload_[1][7..]) : 0
     return Time.utc
       --year=year
       --month=month
@@ -587,28 +587,28 @@ class Gll extends NmeaMessage:
     super.private_ talker id payload
 
   latitude -> float:
-    return float.parse payload[1]
+    return float.parse payload_[1]
 
   latitude-n -> string:
-    return payload[2]
+    return payload_[2]
 
   longitude -> float:
-    return float.parse payload[3]
+    return float.parse payload_[3]
 
   longitude-e -> string:
-    return payload[4]
+    return payload_[4]
 
   //payload 5 is time
 
   /**
   */
   status -> string:
-    return payload[6]
+    return payload_[6]
 
   /** Positioning Mode. (NMEA2.3 or later.) */
   positioning-mode -> string?:
-    if payload.size >= 8 and payload[7] != "":
-      return payload[7]
+    if payload_.size >= 8 and payload_[7] != "":
+      return payload_[7]
     return null
 
   stringify -> string:
@@ -670,25 +670,25 @@ class Gsa extends NmeaMessage:
     super.private_ talker id payload
 
   operation-mode -> string:
-    return payload[1]
+    return payload_[1]
 
   nav-mode -> int:
-    return int.parse payload[2]
+    return int.parse payload_[2]
 
   system-id -> int?:
-    if payload.size >= 19:
-      return int.parse payload[18] --if-error=: SYSTEM-ID-UNSPECIFIED
+    if payload_.size >= 19:
+      return int.parse payload_[18] --if-error=: SYSTEM-ID-UNSPECIFIED
     else:
       return NmeaParser.TALKER-LOOKUP_[talker]
 
   p-dop -> float:
-    return float.parse payload[15]
+    return float.parse payload_[15]
 
   h-dop -> float:
-    return float.parse payload[16]
+    return float.parse payload_[16]
 
   v-dop -> float:
-    return float.parse payload[17]
+    return float.parse payload_[17]
 
   /**
   Satellite IDs (SVIDs) used in the calculation.
@@ -699,11 +699,11 @@ class Gsa extends NmeaMessage:
     documentation to turn these numbers into PRN's.
   */
   satellites -> List:
-    blank-pos := payload.index-of ""
+    blank-pos := payload_.index-of ""
     end := 15
     if blank-pos > 3:
       end = blank-pos
-    return payload[3..end]
+    return payload_[3..end]
 
   stringify -> string:
     sats/List := satellites.copy
@@ -742,15 +742,15 @@ class Gsv extends NmeaMessage:
     return true
 
   message-part -> List:
-    return [int.parse payload[2], int.parse payload[1]]
+    return [int.parse payload_[2], int.parse payload_[1]]
 
   /** Number of SVs in this message. */
   num-svs -> int:
-    return (payload.size - 4) / 4
+    return (payload_.size - 4) / 4
 
   /** Number of SVs for this talker (across all messages). */
   total-svs -> int:
-    return int.parse payload[3]
+    return int.parse payload_[3]
 
   /**
   A map SV's currently in view.
@@ -768,10 +768,10 @@ class Gsv extends NmeaMessage:
     out-map := {:}
     num-svs.repeat:
       num := 4 + (it * 4)
-      prn := int.parse payload[num]
-      elev := float.parse payload[num + 1] --if-error=(: null)
-      az := float.parse payload[num + 2] --if-error=(: null)
-      snr := float.parse payload[num + 3] --if-error=(: null)
+      prn := int.parse payload_[num]
+      elev := float.parse payload_[num + 1] --if-error=(: null)
+      az := float.parse payload_[num + 2] --if-error=(: null)
+      snr := float.parse payload_[num + 3] --if-error=(: null)
       out-map[prn] = [elev, az, snr]
     return out-map
 
@@ -818,29 +818,29 @@ class Gns extends NmeaMessage:
     super.private_ talker id payload
 
   utc-string -> string:
-    return payload[1]
+    return payload_[1]
 
   latitude -> float:
-    return float.parse payload[2]
+    return float.parse payload_[2]
 
   latitude-n -> string:
-    return payload[3]
+    return payload_[3]
 
   longitude -> float:
-    return float.parse payload[4]
+    return float.parse payload_[4]
 
   longitude-e -> string:
-    return payload[5]
+    return payload_[5]
 
   fix-quality -> int:
-    return int.parse payload[6]
+    return int.parse payload_[6]
 
   is-fix-valid -> bool:
     return fix-quality > QUALITY-NO-FIX
 
   /** Number of satellites in the message. */
   satellite-count -> int:
-    return int.parse payload[7]
+    return int.parse payload_[7]
 
   /**
   Horizontal dilution-of-precision.
@@ -850,23 +850,23 @@ class Gns extends NmeaMessage:
     measurement error.
   */
   horizontal-dop -> int:
-    return int.parse payload[8]
+    return int.parse payload_[8]
 
   /** Altitude */
   altitude -> float:
-    return float.parse payload[9]
+    return float.parse payload_[9]
 
   /** Geoid separation: difference between geoid and mean sea level. */
   geoidal-separation -> float:
-    return float.parse payload[10]
+    return float.parse payload_[10]
 
   /** Age (seconds) of differential corrections (null if DGPS not used). */
   differential-age -> int?:
-    return int.parse payload[11] --if-error=: null
+    return int.parse payload_[11] --if-error=: null
 
   /** ID of station providing differential corrections (null if DGPS not used). */
   differential-station  -> int:
-    return int.parse payload[12] --if-error=: null
+    return int.parse payload_[12] --if-error=: null
 
   stringify -> string:
     if not is-fix-valid:
@@ -909,10 +909,10 @@ class Gbs extends NmeaMessage:
   */
   time -> Time:
     return Time.epoch
-      --h=(int.parse (payload[1])[0..2])
-      --m=(int.parse (payload[1])[2..4])
-      --s=(int.parse (payload[1])[4..6])
-      --ms=(int.parse (payload[1])[7..])
+      --h=(int.parse (payload_[1])[0..2])
+      --m=(int.parse (payload_[1])[2..4])
+      --s=(int.parse (payload_[1])[4..6])
+      --ms=(int.parse (payload_[1])[7..])
 
   /**
   Expected error in latitude (in meters).
@@ -920,7 +920,7 @@ class Gbs extends NmeaMessage:
   null if RAIM failed.
   */
   err-latitude -> float?:
-    return float.parse payload[2] --if-error=: null
+    return float.parse payload_[2] --if-error=: null
 
   /**
   Expected error in longitude (in meters).
@@ -928,7 +928,7 @@ class Gbs extends NmeaMessage:
   null if RAIM failed.
   */
   err-longitude -> float?:
-    return float.parse payload[3] --if-error=: null
+    return float.parse payload_[3] --if-error=: null
 
   /**
   Expected error in altitude (in meters).
@@ -936,7 +936,7 @@ class Gbs extends NmeaMessage:
   null if RAIM failed.
   */
   err-altitude -> float?:
-    return float.parse payload[4] --if-error=: null
+    return float.parse payload_[4] --if-error=: null
 
   /**
   SVID of most likely failed satellite.
@@ -949,7 +949,7 @@ class Gbs extends NmeaMessage:
     only, and use manufacturer documentation to turn these numbers into PRN's.
   */
   svid -> int?:
-    return int.parse payload[5] --if-error=: null
+    return int.parse payload_[5] --if-error=: null
 
   /**
   Probability of missed detection.
@@ -957,7 +957,7 @@ class Gbs extends NmeaMessage:
   Null if RAIM passed, or unsupported.
   */
   probability -> float?:
-    return float.parse payload[6] --if-error=: null
+    return float.parse payload_[6] --if-error=: null
 
   /**
   Estimate on most likely failed satellite (a priori residual).
@@ -965,11 +965,11 @@ class Gbs extends NmeaMessage:
   Null if RAIM passed, or unsupported.
   */
   bias -> float?:
-    return float.parse payload[7] --if-error=: null
+    return float.parse payload_[7] --if-error=: null
 
   /** Standard deviation (in meters).
 
   null if RAIM passed, or unsupported.
   */
   standard-deviation -> float?:
-    return float.parse payload[8] --if-error=: null
+    return float.parse payload_[8] --if-error=: null
