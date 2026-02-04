@@ -110,16 +110,16 @@ the difference before and after:
 ```Toit
 // Initial setup omitted, see Examples.
 nmea-parser := NmeaParser
-print "Base NmeaMessage count:  $nmea-parser.message-count"
+print "Base NmeaMessage count:  $nmea-parser.registry.size"
 print "Supported Messages:      $nmea-parser.registry.keys"
 
 // Add UBX messages to active NMEA parser/registry.
 nmea-parser.add NmeaUbxParser.MESSAGES
-print "+UBX message count:      $nmea-parser.message-count"
+print "+UBX message count:      $nmea-parser.registry.size"
 print "+UBX Supported Messages: $nmea-parser.registry.keys"
 ```
-In this way, the code used for CASIC messages does not need to be downloaded to
-the device when using a UBLOX device.
+In this way, the code used for all supported devices does not need to be
+imported/downloaded to the ESP32 when using just one device type.
 
 ### NMEA message libraries:
 | Identifier | Vendor/Protocol | Import library | Example Modules |
