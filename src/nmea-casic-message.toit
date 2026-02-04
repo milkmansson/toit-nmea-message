@@ -102,7 +102,7 @@ class Cas02 extends NmeaMessage:
     super.private_  "P" ID payload
 
   stringify -> string:
-    return  "$super: rate:$OUTPUT-RATE-LOOKUP_[payload[1]]"
+    return  "$super: rate:$OUTPUT-RATE-LOOKUP_[payload_[1]]"
 
 /**
 CAS03: Configures specific messages are output or not.
@@ -175,50 +175,50 @@ class Cas03 extends NmeaMessage:
     if dhv or lps or utc or gst or tim:
       payload-size = PAYLOAD-SIZE-EXTENDED_
     super.private_ "P" ID (List payload-size)
-    payload[0] = "$talker$ID"
-    payload[TYPE-GGA] = gga or ""
-    payload[TYPE-GLL] = gll or ""
-    payload[TYPE-GSA] = gsa or ""
-    payload[TYPE-GSV] = gsv or ""
-    payload[TYPE-RMC] = rmc or ""
-    payload[TYPE-VTG] = vtg or ""
-    payload[TYPE-ZDA] = zda or ""
-    payload[TYPE-TXT] = txt or ""
+    payload_[0] = "$talker_$ID"
+    payload_[TYPE-GGA] = gga or ""
+    payload_[TYPE-GLL] = gll or ""
+    payload_[TYPE-GSA] = gsa or ""
+    payload_[TYPE-GSV] = gsv or ""
+    payload_[TYPE-RMC] = rmc or ""
+    payload_[TYPE-VTG] = vtg or ""
+    payload_[TYPE-ZDA] = zda or ""
+    payload_[TYPE-TXT] = txt or ""
 
-    if payload.size == PAYLOAD-SIZE-EXTENDED_:
-      payload[TYPE-DHV] = dhv or ""
-      payload[TYPE-LPS] = lps or ""
-      payload[TYPE-UTC] = utc or ""
-      payload[TYPE-GST] = gst or ""
-      payload[TYPE-TIM] = tim or ""
+    if payload_.size == PAYLOAD-SIZE-EXTENDED_:
+      payload_[TYPE-DHV] = dhv or ""
+      payload_[TYPE-LPS] = lps or ""
+      payload_[TYPE-UTC] = utc or ""
+      payload_[TYPE-GST] = gst or ""
+      payload_[TYPE-TIM] = tim or ""
 
   constructor.private_ talker/string id/string payload/List:
     assert: payload.size == PAYLOAD-SIZE_ or payload.size == PAYLOAD-SIZE-EXTENDED_
     super.private_  "P" ID payload
 
-  gga-rate -> int: return payload[TYPE-GGA]
-  gll-rate -> int: return payload[TYPE-GLL]
-  gsa-rate -> int: return payload[TYPE-GSA]
-  gsv-rate -> int: return payload[TYPE-GSV]
-  rmc-rate -> int: return payload[TYPE-RMC]
-  vtg-rate -> int: return payload[TYPE-VTG]
-  zda-rate -> int: return payload[TYPE-ZDA]
-  ant-rate -> int: return payload[TYPE-TXT]
-  dhv-rate -> int?: return is-extended ? payload[TYPE-DHV] : ""
-  lps-rate -> int?: return is-extended ? payload[TYPE-LPS] : ""
-  utc-rate -> int?: return is-extended ? payload[TYPE-UTC] : ""
-  gst-rate -> int?: return is-extended ? payload[TYPE-GST] : ""
-  tim-rate -> int?: return is-extended ? payload[TYPE-TIM] : ""
+  gga-rate -> int: return payload_[TYPE-GGA]
+  gll-rate -> int: return payload_[TYPE-GLL]
+  gsa-rate -> int: return payload_[TYPE-GSA]
+  gsv-rate -> int: return payload_[TYPE-GSV]
+  rmc-rate -> int: return payload_[TYPE-RMC]
+  vtg-rate -> int: return payload_[TYPE-VTG]
+  zda-rate -> int: return payload_[TYPE-ZDA]
+  ant-rate -> int: return payload_[TYPE-TXT]
+  dhv-rate -> int?: return is-extended ? payload_[TYPE-DHV] : ""
+  lps-rate -> int?: return is-extended ? payload_[TYPE-LPS] : ""
+  utc-rate -> int?: return is-extended ? payload_[TYPE-UTC] : ""
+  gst-rate -> int?: return is-extended ? payload_[TYPE-GST] : ""
+  tim-rate -> int?: return is-extended ? payload_[TYPE-TIM] : ""
 
   is-extended -> bool:
-    return payload.size == PAYLOAD-SIZE-EXTENDED_
+    return payload_.size == PAYLOAD-SIZE-EXTENDED_
 
   stringify -> string:
     out := List 0
     TYPE-LOOKUP_.keys.do: | key |
-      if key < payload.size:
-        if (payload[key] != ""):
-          out.add "$TYPE-LOOKUP_[key]:$payload[key])"
+      if key < payload_.size:
+        if (payload_[key] != ""):
+          out.add "$TYPE-LOOKUP_[key]:$payload_[key])"
     return  "$super: enabled|$(out.join "|" )"
 
 /**
@@ -252,18 +252,18 @@ class Cas04 extends NmeaMessage:
     super.private_  "P" ID payload
 
   is-gps-enabled -> bool:
-    return (payload[1] & GPS) != 0
+    return (payload_[1] & GPS) != 0
 
   is-bds-enabled -> bool:
-    return (payload[1] & BDS) != 0
+    return (payload_[1] & BDS) != 0
 
   is-glonass-enabled -> bool:
-    return (payload[1] & GLONASS) != 0
+    return (payload_[1] & GLONASS) != 0
 
   stringify -> string:
     out-list := []
     TYPE-LOOKUP_.keys.do:
-      if (payload[1] & it) != 0:
+      if (payload_[1] & it) != 0:
         out-list.add TYPE-LOOKUP_[it]
     return  "$super: enabled:$(out-list.join ",")"
 
@@ -301,7 +301,7 @@ class Cas05 extends NmeaMessage:
     super.private_  "P" ID payload
 
   stringify -> string:
-    return  "$super: mode:$(MODE-LOOKUP_[payload[1]])"
+    return  "$super: mode:$(MODE-LOOKUP_[payload_[1]])"
 
 
 /**
@@ -343,7 +343,7 @@ class Cas06 extends NmeaMessage:
     super.private_  "P" ID payload
 
   info-type -> int:
-    return int.parse payload[1]
+    return int.parse payload_[1]
 
   stringify -> string:
     return  "$super: info-type:$(INFO-LOOKUP_[info-type])"
@@ -378,7 +378,7 @@ class Cas10 extends NmeaMessage:
     super.private_  "P" ID payload
 
   start-type -> int:
-    return int.parse payload[1]
+    return int.parse payload_[1]
 
   stringify -> string:
     return  "$super: restart-type:$(START-LOOKUP_[start-type])"
@@ -396,7 +396,7 @@ class Cas12 extends NmeaMessage:
     super.private_ "P" ID ["P$ID", "$seconds"]
 
   seconds -> int:
-    return int.parse payload[1]
+    return int.parse payload_[1]
 
   stringify -> string:
     return  "$super: standby-seconds:$(seconds)"
@@ -421,30 +421,30 @@ class Cas60 extends NmeaMessage:
 
   time -> Time:
     return Time.utc
-      --year=(int.parse (payload[2][5..9]))
-      --month=(int.parse (payload[2][2..5]))
-      --day=(int.parse (payload[2][0..3]))
-      --h=(int.parse (payload[1])[0..2])
-      --m=(int.parse (payload[1])[2..4])
-      --s=(int.parse (payload[1])[4..6])
-      --ms=(int.parse (payload[1])[7..])
+      --year=(int.parse (payload_[2][5..9]))
+      --month=(int.parse (payload_[2][2..5]))
+      --day=(int.parse (payload_[2][0..3]))
+      --h=(int.parse (payload_[1])[0..2])
+      --m=(int.parse (payload_[1])[2..4])
+      --s=(int.parse (payload_[1])[4..6])
+      --ms=(int.parse (payload_[1])[7..])
 
   /** GPS System week number. */
   week-number -> int:
-    return int.parse payload[3]
+    return int.parse payload_[3]
 
   /** GPS System seconds of week. */
   tow -> int:
-    return int.parse payload[4]
+    return int.parse payload_[4]
 
   /** Whether time, $week-number and $tow are valid time. */
   time-valid -> bool:
-    return payload[5] == "1"
+    return payload_[5] == "1"
 
   /** Difference between GPS time and UTC time, leap seconds. */
   leaps-number -> int:
-    return int.parse payload[6]
+    return int.parse payload_[6]
 
   /** Whether the leap seconds leaps are valid. */
   leaps-valid -> bool:
-    return payload[7] == "1"
+    return payload_[7] == "1"

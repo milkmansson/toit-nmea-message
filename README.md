@@ -126,7 +126,7 @@ imported/downloaded to the ESP32 when using just one device type.
 | - | - | -  | - |
 | `$nnxxx`   | NMEA 0183 standard   | `nmea-message` | Many/most modules support NMEA.  |
 | `$PCASxx`  | CASIC (proprietary)  | `nmea-casic-message` | - ATGM336H <br> - AT6558 Silicon |
-| `$PUBX,xx` | uBlox (proprietary)  | `nmea-ubx-message` | - Ubx NEO M7 <br> - Others |
+| `$PUBX,xx` | uBlox (proprietary)  | `nmea-ubx-message` | - Ubx NEO M6,M7,etc <br> - Other UBX Compatible |
 | `$PGRMx`   | Garmin (proprietary) | `nmea-grm-message` | untested |
 | `$PSRFxx`  | SiRF (proprietary)   | `nmea-srf-message` | untested |
 

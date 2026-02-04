@@ -475,8 +475,9 @@ class Rmc extends NmeaMessage:
   constructor.private_ .talker/string id/string payload/List:
     super.private_ talker id payload
 
-  //time-utc -> Time?:
-  //  return Time.parse payload_[1] --if-error=: null
+  timestamp -> string?:
+    if payload_[1] == "": return null
+    return payload_[1]
 
   status -> string:
     return payload_[2]
@@ -598,7 +599,9 @@ class Gll extends NmeaMessage:
   longitude-e -> string:
     return payload_[4]
 
-  //payload 5 is time
+  timestamp -> string:
+    return payload_[5]
+
 
   /**
   */
@@ -788,7 +791,7 @@ class Gsv extends NmeaMessage:
 /**
 GNS: GPS fix data.
 
-Includes time, lat/lon, fix quality, number of sats used, HDOP, altitude, geoid
+Includes timestamp, lat/lon, fix quality, number of sats used, HDOP, altitude, geoid
   separation, etc.
 
 This message type is similar to GGA but used for multi-constellation fixes.
@@ -817,7 +820,8 @@ class Gns extends NmeaMessage:
   constructor.private_ .talker/string id/string payload/List:
     super.private_ talker id payload
 
-  utc-string -> string:
+  timestamp -> string?:
+    if payload_[1] == "": return null
     return payload_[1]
 
   latitude -> float:
@@ -903,16 +907,15 @@ class Gbs extends NmeaMessage:
     super.private_ talker id payload
 
   /**
-  Time for use as a comparative reference to other messages.
+  Returns UTC timestamp of the message.
 
-  Time misses date, and therefore is not absolute.  Use RMC or ZDA for this.
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA for this.
   */
-  time -> Time:
-    return Time.epoch
-      --h=(int.parse (payload_[1])[0..2])
-      --m=(int.parse (payload_[1])[2..4])
-      --s=(int.parse (payload_[1])[4..6])
-      --ms=(int.parse (payload_[1])[7..])
+  timestamp -> string?:
+    if payload_[1] == "": return null
+    return payload_[1]
 
   /**
   Expected error in latitude (in meters).

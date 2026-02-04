@@ -57,56 +57,55 @@ class Ubx00 extends NmeaMessage:
     super.private_ "P" ID payload
 
   is-poll -> bool:
-    return payload.size < 3
+    return payload_.size < 3
 
   /**
-  Time for use as a comparative reference to other messages.
+  Returns UTC timestamp of the message.
 
-  Time misses date, and therefore is not absolute.  Use RMC or ZDA for this.
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA
+    or PUBX,04 for this.
   */
-  time -> Time:
-    return Time.epoch
-      --h=(int.parse (payload[2])[0..2])
-      --m=(int.parse (payload[2])[2..4])
-      --s=(int.parse (payload[2])[4..6])
-      --ms=(int.parse (payload[2])[7..])
+  timestamp -> string?:
+    if payload_[2] == "": return null
+    return payload_[2]
 
   latitude -> float:
-    return float.parse payload[3]
+    return float.parse payload_[3]
 
   latitude-n -> string:
-    return payload[4]
+    return payload_[4]
 
   longitude -> float:
-    return float.parse payload[5]
+    return float.parse payload_[5]
 
   longitude-e -> string:
-    return payload[6]
+    return payload_[6]
 
   altitude -> float:
-    return float.parse payload[7]
+    return float.parse payload_[7]
 
   nav-status -> string:
-    return payload[8]
+    return payload_[8]
 
   h-accuracy -> float:
-    return float.parse payload[9]
+    return float.parse payload_[9]
 
   v-accuracy -> float:
-    return float.parse payload[10]
+    return float.parse payload_[10]
 
   speed-over-ground -> float:
-    return float.parse payload[11] --if-error=: 0.0
+    return float.parse payload_[11] --if-error=: 0.0
 
   course-over-ground -> float:
-    return float.parse payload[12] --if-error=: 0.0
+    return float.parse payload_[12] --if-error=: 0.0
 
   vertical-velocity -> float:
-    return float.parse payload[13] --if-error=: 0.0
-
+    return float.parse payload_[13] --if-error=: 0.0
 
   num-svs -> int:
-    return int.parse payload[18] --if-error=: 0
+    return int.parse payload_[18] --if-error=: 0
 
   stringify -> string:
     if is-poll:
@@ -128,9 +127,7 @@ class Ubx03 extends NmeaMessage:
     super.private_ "P" ID payload
 
   is-poll -> bool:
-    return payload.size < 3
-
-
+    return payload_.size < 3
 
   stringify -> string:
     if is-poll:
@@ -190,15 +187,14 @@ class Ubx40 extends NmeaMessage:
     fields[8] = "0"
     super.private_ "P" ID fields
 
-  /** Not expected - leaving here until test of this function. */
   constructor.private_ talker/string id/string payload/List:
     super.private_  "P" ID payload
 
   type -> string:
-    return payload[2]
+    return payload_[2]
 
   stringify -> string:
     list := []
     FIELD-LOOKUP_.keys.do:
-      if payload[it] == 1: list += FIELD-LOOKUP_[it]
+      if payload_[it] == 1: list += FIELD-LOOKUP_[it]
     return  "$super: msgid:$type|$(list.join ",")"
