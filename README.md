@@ -93,16 +93,17 @@ the function `message-part` will return a two member list: `message-part[0]`
 returns the message's own number, and `message-part[1]` will return the total
 number of expected messages.
 
-### Proprietary messages in NMEA
+### Proprietary NMEA messages
 The NMEA standard supports proprietary messages. This NMEA parser accomodates a
 baseline of NMEA sentences.  Proprietary messages (identified by the talker code
 `P` followed by some vendor specific identifier characters) can be added to the
-parser registry.
+parser registry, using the extensions provided with this package, and/or
+user created extensions.
 
 > [!IMPORTANT]
 > In order to not have one sprawling parser supporting many devices when a
 > project would usually only have one GNSS device physically attached,
-> proprietary parser libraries are provided separately.
+> proprietary parser libraries are provided as extensions.
 
 Example: Initialise the library, add the UBX proprietary messages, displaying
 the difference before and after:
