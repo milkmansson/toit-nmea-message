@@ -82,6 +82,8 @@ class NmeaParser:
     Gbs.ID: :: | talker payload | Gbs.private_ talker payload,
     Mss.ID: :: | talker payload | Mss.private_ talker payload,
     Gst.ID: :: | talker payload | Gst.private_ talker payload,
+    Vlw.ID: :: | talker payload | Vlw.private_ talker payload,
+    Rlm.ID: :: | talker payload | Rlm.private_ talker payload,
   }
 
   constructor --proprietary-messages/Map?=null:
@@ -1120,3 +1122,104 @@ class PollTalker extends NmeaMessage:
 
   stringify -> string:
     return  "$super: poll:$payload_[1]"
+
+
+/**
+VLW: Dual ground/water distance. (NMEA 4.00 or later)
+
+The distance traveled, relative to the water and over the ground.
+*/
+class Vlw extends NmeaMessage:
+  static ID ::= "VLW"
+
+  /** Creates a standard poll for MSS from the specified talker id. */
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker "Q" ["$(talker)Q",ID]
+
+  constructor.private_ talker/string payload/List:
+    super.private_ talker ID payload
+
+  twd -> float?:
+    return float.parse payload_[1] --if-error=: null
+
+  twd-unit -> string?:
+    return payload_[2]
+
+  wd -> float?:
+    return float.parse payload_[3] --if-error=: null
+
+  wd-unit -> string?:
+    return payload_[4]
+
+  tgd -> float?:
+    return float.parse payload_[5] --if-error=: null
+
+  tgd-unit -> string:
+    return payload_[6]
+
+  gd -> float?:
+    return float.parse payload_[7] --if-error=: null
+
+  gd-unit -> string?:
+    return payload_[8]
+
+/**
+RLM: Return Link Message.
+
+The RLM sentence is used to transfer a Return link message from a Cospas-Sarsat
+recognized Return link service provider (RLSP).
+
+The RLM sentence supports communications to an emitting beacon once a distress
+  alert has been detected, located and confirmed. The communications may include
+  acknowledgement of the alert to the emitting beacon as well as optional text
+  messages, and may also include remote beacon configuration and testing.
+*/
+class Rlm extends NmeaMessage:
+  static ID ::= "RLM"
+
+  /** Creates a standard poll for MSS from the specified talker id. */
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker "Q" ["$(talker)Q",ID]
+
+  constructor.private_ talker/string payload/List:
+    super.private_ talker ID payload
+
+  /** Beacon ID, identifies beacon intended to receive this message. */
+  beacon -> int?:
+    return (int.parse payload_[1] --radix=16 --if-error=: null)
+
+  /**
+  Returns UTC timestamp of the message.
+
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA for this.
+  */
+  timestamp -> string?:
+    if payload_[2] == "": return null
+    return payload_[2]
+
+  /**
+  Message code field to identify type of RLM Message.
+
+  Service:
+  - 0 = Reserved for future RLM services.
+  - 1 = Acknowledgement service RLM.
+  - 2 = Command service RLM.
+  - 3 = Message service RLM.
+  - 4-E = Reserved for future RLM services.
+  - F = Test service RLM (currently used only by the Galileo program.
+  */
+  code -> string:
+    return payload_[3]
+
+  body -> int:
+    return (int.parse payload_[4] --radix=16 --if-error=: null)
+
+  stringify -> string:
+    list := []
+    list.add "beacon:$(%02x beacon)"
+    list.add "timestamp:$(timestamp)"
+    list.add "code:$(code)"
+    list.add "body:$(%02x body)"
+    return  "$super: $(list.join "|")"

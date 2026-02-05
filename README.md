@@ -27,9 +27,11 @@ on 5 Jan 2024.
 > use cases appear.
 
 ### NMEA Versions:
-- BeiDou and Galileo: Only NMEA version 4.10 and later have support for these
-  systems.
-- QZSS: Only NMEA version 4.11 and later have support for this system.
+- GPS/SBAS: NMEA 2.3+
+- GLONASS: NMEA 2.3+
+- BeiDou: Only NMEA version 4.10 and later have support for Beidou.
+- Galileo: (Officially) Only since NMEA version 4.11.
+- QZSS: Only NMEA version 4.11 and later have support for QZSS.
 
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
@@ -95,6 +97,16 @@ on the [Toit package registry](http://pkg.toit.io).
 > of a 9600 bps serial connection.  This can be too heavy a load for the low
 > baudrate.  In these cases, configuration is requied to either reduce the
 > message load, or, increase the baudrate.
+
+### Lat/Lon output
+According to the NMEA standard, latitude and longitude are output in the format
+degrees, minutes and (decimal) fractions of minutes. To convert to degrees and
+fractions of degrees, or degrees, minutes, seconds and fractions of seconds, the
+minutes and fractional minutes parts need to be converted:
+```Toit
+
+degrees/float := dm-to-degrees number n
+```
 
 ### Multipart messages
 All messages have the function `is-multipart`.  This is false by default, but is
