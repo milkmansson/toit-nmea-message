@@ -181,9 +181,10 @@ class NmeaParser:
 abstract class NmeaMessage:
   static ID ::= "NONE"
   talker/string
+  id_/string
   payload_/List
 
-  constructor.private_ .talker/string .payload_/List:
+  constructor.private_ .talker/string .id_/string .payload_/List:
 
   /** Whether this message is a poll. */
   is-poll -> bool:
@@ -205,7 +206,7 @@ abstract class NmeaMessage:
 
   /** See $super. */
   stringify -> string:
-    return "NMEA-$talker-$ID"
+    return "NMEA-$talker-$id_"
 
   /** Full Message Name. */
   full-name -> string:
@@ -244,7 +245,7 @@ class Txt extends NmeaMessage:
   }
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   is-multipart -> bool:
     return (int.parse payload_[1]) >= 2
@@ -284,10 +285,10 @@ class Gga extends NmeaMessage:
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   utc-string -> string:
     return payload_[1]
@@ -340,10 +341,10 @@ class Zda extends NmeaMessage:
   static ID ::= "ZDA"
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   lz-hours -> int:
     return int.parse payload_[5]
@@ -381,17 +382,17 @@ class Vtg extends NmeaMessage:
   static POS-MODE-LOOKUP_ ::= {
     POS-MODE-AUTONOMOUS: "Autonomous",
     POS-MODE-ESTIMATION: "Estimation",
-    POS-MODE-INVALID-DATA: "Invalid Data",
+    POS-MODE-INVALID-DATA: "Data Invalid",
     POS-MODE-DIFFERENTIAL: "Differential",
     POS-MODE-SIMULATOR: "Simulator",
     POS-MODE-MANUAL: "Manual"
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   true-course -> float?:
     return float.parse payload_[1] --if-error=: 0.0
@@ -449,10 +450,10 @@ class Rmc extends NmeaMessage:
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   timestamp -> string?:
     if payload_[1] == "": return null
@@ -558,10 +559,10 @@ class Gll extends NmeaMessage:
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   latitude -> float:
     return float.parse payload_[1]
@@ -631,7 +632,7 @@ class Gsa extends NmeaMessage:
   static SYSTEM-ID-SBAS ::= 2
   static SYSTEM-ID-GLONASS ::= 3
   static SYSTEM-ID-QZSS ::= 4
-  static SYSTEM-LOOKUP ::= {
+  static SYSTEM-LOOKUP_ ::= {
     SYSTEM-ID-UNSPECIFIED: "UNSPECIFIED",
     SYSTEM-ID-GPS: "GPS",
     SYSTEM-ID-SBAS: "SBAS",
@@ -640,10 +641,10 @@ class Gsa extends NmeaMessage:
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   operation-mode -> string:
     return payload_[1]
@@ -651,11 +652,13 @@ class Gsa extends NmeaMessage:
   nav-mode -> int:
     return int.parse payload_[2]
 
-  system-id -> int?:
+  system-id -> string?:
     if payload_.size >= 19:
-      return int.parse payload_[18] --if-error=: SYSTEM-ID-UNSPECIFIED
+      id := int.parse payload_[18] --if-error=: SYSTEM-ID-UNSPECIFIED
+      return SYSTEM-LOOKUP_[id]
     else:
       return NmeaParser.TALKER-LOOKUP_[talker]
+      //return talker
 
   p-dop -> float:
     return float.parse payload_[15]
@@ -684,7 +687,8 @@ class Gsa extends NmeaMessage:
   stringify -> string:
     sats/List := satellites.copy
     sats.remove --all ""
-    return  "$super: $SYSTEM-LOOKUP[system-id]:$sats"
+    sats-string/string := sats.size > 0 ? sats : "NONE"
+    return  "$super: $system-id:$sats-string"
 
 /**
 GSV: GNSS Satellites in View.
@@ -706,10 +710,10 @@ class Gsv extends NmeaMessage:
   static ID ::= "GSV"
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   is-multipart -> bool:
     return true
@@ -782,10 +786,10 @@ class Gns extends NmeaMessage:
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   timestamp -> string?:
     if payload_[1] == "": return null
@@ -865,10 +869,10 @@ class Gbs extends NmeaMessage:
   static ID ::= "GBS"
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   /**
   Returns UTC timestamp of the message.
@@ -954,10 +958,10 @@ class Mss extends NmeaMessage:
   static ID ::= "MSS"
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker payload
+    super.private_ talker ID payload
 
   signal-strength -> float?:
     return float.parse payload_[1] --if-error=: null

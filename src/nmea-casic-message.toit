@@ -16,7 +16,7 @@ Support for the CASIC Standard Interface Protocol (CSIP) binary protocol is
 
 class NmeaCasicParser:
   static MESSAGES/Map := {
-  //  "P$Cas00.ID": :: | talker payload | Cas00.private_ payload,
+  //  "P$Cas00.ID": :: | talker payload | Cas00.private_ payload,  // No messages of this type are emitted.
     "P$Cas01.ID": :: | talker payload | Cas01.private_ payload,
     "P$Cas02.ID": :: | talker payload | Cas02.private_ payload,
     "P$Cas03.ID": :: | talker payload | Cas03.private_ payload,
@@ -32,16 +32,20 @@ class NmeaCasicParser:
 
 /**
 CAS00: Save current configuration in flash.
+
+Device will remember the configuration for as long as the on-board battery
+  lasts.  (Configurationa and ephemeris data are both lost when the charge on
+  the battery depletes.)  Configurations will save on the onboard flash if this
+  message is sent to the device.
 */
 class Cas00 extends NmeaMessage:
   static ID ::= "CAS00"
 
   constructor:
-    super.private_ "P" ["P$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   // No Private constructor, no messages of this type are emitted.
-  //constructor.private_ payload/List:
-  //  super.private_  "P" payload
+
 
 /**
 CAS02: Set Baud Rate.
@@ -80,11 +84,11 @@ class Cas01 extends NmeaMessage:
   constructor.set baudrate/int:
     nearest := nearest-baud_ baudrate
     if nearest != baudrate: print "Clamping baudrate to nearest: $nearest baud"
-    super.private_ "P" ["P$ID", BAUD-CODE_[nearest]]
+    super.private_ "P" ID ["P$ID", BAUD-CODE_[nearest]]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   /** Returns the nearest supported baud rate.  */
   static nearest-baud_ baud/int -> int:
@@ -126,11 +130,11 @@ class Cas02 extends NmeaMessage:
 
   constructor.set rate/int:
     assert: OUTPUT-RATE-LOOKUP_.contains rate
-    super.private_ "P" ["P$ID", rate]
+    super.private_ "P" ID ["P$ID", rate]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   stringify -> string:
     return  "$super: rate:$OUTPUT-RATE-LOOKUP_[payload_[1]]"
@@ -203,7 +207,7 @@ class Cas03 extends NmeaMessage:
       --gst/int?=null
       --tim/int?=null:
     payload-size := dhv or lps or utc or gst or tim ? PAYLOAD-SIZE-42_ : PAYLOAD-SIZE-36_
-    super.private_ "P" (List payload-size)
+    super.private_ "P" ID (List payload-size)
     payload_[0] = "P$ID"
     payload_[TYPE-GGA] = gga or ""
     payload_[TYPE-GLL] = gll or ""
@@ -223,7 +227,7 @@ class Cas03 extends NmeaMessage:
 
   constructor.private_ payload/List:
     assert: payload.size == PAYLOAD-SIZE-36_ or payload.size == PAYLOAD-SIZE-42_
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   gga-rate -> int: return payload_[TYPE-GGA]
   gll-rate -> int: return payload_[TYPE-GLL]
@@ -274,11 +278,11 @@ class Cas04 extends NmeaMessage:
 
   constructor.set --mask/int:
     assert: 0 <= mask <= 31
-    super.private_ "P" ["P$ID", mask]
+    super.private_ "P" ID ["P$ID", mask]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   is-gps-enabled -> bool:
     return (payload_[1] & GPS) != 0
@@ -323,11 +327,11 @@ class Cas05 extends NmeaMessage:
 
   constructor.set --mode/int:
     assert: MODE-LOOKUP_.contains mode
-    super.private_ "P" ["P$ID", mode]
+    super.private_ "P" ID ["P$ID", mode]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   stringify -> string:
     return  "$super: mode:$(MODE-LOOKUP_[payload_[1]])"
@@ -360,14 +364,14 @@ class Cas06 extends NmeaMessage:
   }
 
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ["$(talker)Q",ID]
+    super.private_ talker ID ["$(talker)Q",ID]
 
   constructor.set info-type/int:
     assert: INFO-LOOKUP_.contains info-type
-    super.private_ "P" ["P$ID", info-type]
+    super.private_ "P" ID ["P$ID", info-type]
 
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   info-type -> int:
     return int.parse payload_[1]
@@ -398,11 +402,11 @@ class Cas10 extends NmeaMessage:
 
   constructor.set start-type/int:
     assert: START-LOOKUP_.contains start-type
-    super.private_ "P" ["P$ID", start-type]
+    super.private_ "P" ID ["P$ID", start-type]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
   start-type -> int:
     return int.parse payload_[1]
@@ -420,7 +424,7 @@ class Cas12 extends NmeaMessage:
 
   constructor.poll --seconds/int:
     assert: 0 < seconds <= 65535
-    super.private_ "P" ["P$ID", "$seconds"]
+    super.private_ "P" ID ["P$ID", "$seconds"]
 
   seconds -> int:
     return int.parse payload_[1]
@@ -444,7 +448,7 @@ class Cas60 extends NmeaMessage:
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_ "P" ID payload
 
   time -> Time:
     return Time.utc

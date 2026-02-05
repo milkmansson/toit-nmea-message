@@ -18,11 +18,11 @@ BAUD   := 9600
 main:
   // Assemble parser.
   nmea-parser := NmeaParser
-  print "Base NmeaMessage count:  $nmea-parser.message-count"
+  print "Base NmeaMessage count:  $nmea-parser.registry.size"
 
   // Add Casic elements to NMEA parser/registry.
   nmea-parser.add NmeaUbxParser.MESSAGES
-  print "+Ubx message count:    $nmea-parser.message-count"
+  print "+Ubx message count:    $nmea-parser.registry.size"
 
   // Open serial communication and start driver.
   print "Opening on $BAUD..."
@@ -44,7 +44,7 @@ main:
   driver.send-message disable-gll
 
   // Allow GGA at default rate to show something is still there
-  disable-gga := Ubx40.set "GGA" --uart1-rate=1
+  disable-gga := Ubx40.set "GGA" --uart1-rate=5
   driver.send-message disable-gga
 
 

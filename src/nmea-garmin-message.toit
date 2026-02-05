@@ -25,11 +25,11 @@ class Grmf extends NmeaMessage:
   static ID ::= "GRMF"
 
   constructor:
-    super.private_ "P" ["P$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
 /**
 GRME: Time/clock information.
@@ -38,8 +38,8 @@ class Grme extends NmeaMessage:
   static ID ::= "GRME"
 
   constructor:
-    super.private_ "P" ["P$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
