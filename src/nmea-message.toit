@@ -1024,18 +1024,6 @@ class Mss extends NmeaMessage:
     return  "$super: $(output.join ":")"
 
 /**
-xxQ: Polls a standard message from a specific talker.
-
-This is implemented as .poll on all the message types, although presented here
-  as a variant for testing and troubleshooting.
-*/
-class Q extends NmeaMessage:
-  static ID ::= "Q"
-
-  constructor.poll --talker=NmeaParser.GPS --id/string:
-    super.private_ talker ID ["$(talker)Q",id]
-
-/**
 GST: GNSS Pseudo Range Error Statistics.
 
 This message reports statisical information on the quality of the position
@@ -1089,3 +1077,21 @@ class Gst extends NmeaMessage:
   /**  Standard Deviation of the altitude error, if supported. */
   altitude-err-standard-deviation -> float?:
     return float.parse payload_[8] --if-error=: null
+
+/**
+xxQ: Polls a standard message from a specific talker.
+
+This is implemented as .poll on all the message types, although presented here
+  as a variant for testing and troubleshooting.
+
+Possible talkers as supported by device chipset, but must be one of
+  the keys in NmeaParser.TALKER-LOOKUP_.
+*/
+class PollTalker extends NmeaMessage:
+  static ID ::= "Q"
+
+  constructor.poll --talker=NmeaParser.GPS --id/string:
+    super.private_ talker ID ["$(talker)Q",id]
+
+  stringify -> string:
+    return  "$super: poll:$payload_[1]"
