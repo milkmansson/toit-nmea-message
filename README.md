@@ -1,12 +1,14 @@
 # Toit Library for NMEA 0183 parsing for GNSS messages
 This Toit library is to add support for NMEA 0183 messages sent by most GNSS
 modules, such the Ublox NEO *M, SiRF, and ATGM336H-5N devices.  It is designed
-to be extensible, in order to add proprietary NMEA message types.
+to be extensible, in order to add proprietary NMEA message types.  Several
+libraries of proprietary NMEA message types are supplied in the package, as well
+as opportunities for user-supplied message types.
 
 ## What is NMEA 0183?
 NMEA 0183 is a long-standing text-based communication standard defined by the
-National Marine Electronics Association (NMEA), for exchanging navigation and sensor
-data between devices.  It specifies an ASCII, line-oriented message
+National Marine Electronics Association (NMEA), for exchanging navigation and
+sensor data between devices.  It specifies an ASCII, line-oriented message
 format that are typically transmitted over serial links.  Messages (often called
 sentences) are identified by a talker ID and a sentence formatter (for example,
 position, time, velocity, or satellite status).  Although originally designed
@@ -19,12 +21,14 @@ on 5 Jan 2024.
 > [!WARNING]
 > NMEA-0183 provides many other message types for other purposes.  For example,
 > "SafetyNet Vessel in distress information" (SMV), Search and Rescue
-> capabilities (RLM), are not GNSS related messages and not expected from GNSS
-> devices.  Whilst they are currently not implemented, this pasrser could be
-> extended to support other types if/when necessary.
+> capabilities (RLM) are NMEA 0183 messages, but not related to GNSS, and are not
+> expected to be emitted from GNSS devices.  Whilst they are currently not
+> implemented, this pasrser could be extended to support other types if/when
+> use cases appear.
 
 ### NMEA Versions:
-- BeiDou and Galileo: Only NMEA version 4.10 and later have support for these systems.
+- BeiDou and Galileo: Only NMEA version 4.10 and later have support for these
+  systems.
 - QZSS: Only NMEA version 4.11 and later have support for this system.
 
 ## What is NMEA 2000?  Why not use this instead?
@@ -39,13 +43,14 @@ onboard marine networking, while NMEA 0183 remains common at the edges of
 systems (simple GPS modules, legacy devices, low-cost sensors).
 
 ## What is a binary parser? Why not use that instead?
+Using the binary parser for the specific device is completely possible. To compare:
 NMEA is:
 - human-readable
 - lossy
 - slow
 - designed for interoperability, not completeness
 
-Even with proprietary/vendor extensions, NMEA only provides:
+Even with proprietary/vendor extensions, NMEA provides:
 - position / velocity / time
 - fix quality
 - limited satellite info
@@ -69,11 +74,16 @@ Binary protocols provide:
 - deterministic framing
 - full capabilities as provided by the manufacturer.
 
-Binary protocols exist because NMEA on its own was insufficient for applied GNSS
-solutions.  However, NMEA may well be sufficient for many hobbyist cases that do
-not need full capability, or for cheaper devices that do not have a full binary
-support of their own.  In many devices, factory configurations have a set of
-NMEA messages automatically sent by default.
+Binary protocols exist because NMEA on its own was insufficient for _applied_
+GNSS solutions.  That said, NMEA may well be sufficient for many hobbyist cases
+that do not need full capability.  Cheaper simpler devices also may not have a
+full featured binary protocol of their own.  In addition, factory configurations
+in many devices have a set of NMEA messages automatically sent by default.
+
+In most cases, a device requires either vendor proprietary NMEA commands for any
+kind of configuration (the purpose of this package) or a full binary protocol
+implementation.  Binary implementations may not exist for your device.  Search
+on the [Toit package registry](http://pkg.toit.io).
 
 ## Example Use cases
 

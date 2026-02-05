@@ -64,13 +64,40 @@ class Cas01 extends NmeaMessage:
     BAUD-115200: 115200,
   }
 
+  // Baud rate list (Ascending order).
+  static BAUDS_ ::= [4800, 9600, 19200, 38400, 57600, 115200]
+
+  // Baud rate to device enum/lookup.
+  static BAUD-CODE_ ::= {
+    4800: BAUD-4800,
+    9600: BAUD-9600,
+    19200: BAUD-19200,
+    38400: BAUD-38400,
+    57600: BAUD-57600,
+    115200: BAUD-115200,
+  }
+
   constructor.set baudrate/int:
-    assert: BAUD-LOOKUP_.contains baudrate
-    super.private_ "P" ["P$ID", baudrate]
+    nearest := nearest-baud_ baudrate
+    super.private_ "P" ["P$ID", BAUD-CODE_[nearest]]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
     super.private_  "P" payload
+
+  /** Returns the nearest supported baud rate.  */
+  static nearest-baud_ baud/int -> int:
+    if baud <= BAUDS_[0]: return BAUDS_[0]
+    if baud >= BAUDS_[BAUDS_.size - 1]: return BAUDS_[BAUDS_.size - 1]
+
+    best/int := BAUDS_[0]
+    best-diff/int := (baud - best).abs
+    BAUDS_.do: | candidate |
+      diff/int := (baud - candidate).abs
+      if diff < best-diff:
+        best = candidate
+        best-diff = diff
+    return best
 
 /**
 CAS02: Set positioning update rate.

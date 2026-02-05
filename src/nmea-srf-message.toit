@@ -50,7 +50,7 @@ Enables development data information to troubleshoot commands being rejected.
 class Srf105 extends NmeaMessage:
   static ID ::= "SRF154"
 
-  constructor.set on/bool=false:
+  constructor.set --on/bool=false:
     debug-value := on ? 1 : 0
     super.private_ "P" ["P$ID", debug-value]
 
