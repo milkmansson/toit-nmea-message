@@ -58,6 +58,12 @@ main:
   time-date := Ubx04.poll
   driver.send-message time-date
 
+
+  print "Sending Poll for a \$GNGGA: NMEA Location..."
+  gga-poll := Gga.poll --talker="GP"
+  driver.send-message gga-poll
+
+
   /*
   // Leave one going to know that the device is still there...
   print "Stopping message noise..."

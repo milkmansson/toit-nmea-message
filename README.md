@@ -102,10 +102,30 @@ on the [Toit package registry](http://pkg.toit.io).
 According to the NMEA standard, latitude and longitude are output in the format
 degrees, minutes and (decimal) fractions of minutes. To convert to degrees and
 fractions of degrees, or degrees, minutes, seconds and fractions of seconds, the
-minutes and fractional minutes parts need to be converted:
+minutes and fractional minutes parts need to be converted.  The main NmeaParser
+library contains a helper function for this:
 ```Toit
+// Create parser object:
+nmea-parser := NmeaParser
 
-degrees/float := dm-to-degrees number n
+// For this exercise, take a GGA string with lat and lon in it:
+gga-message-string := "\$GPGGA,144158.00,0927.68263,N,10002.64614,E,2,08,0.84,7.9,M,-23.9,M,,0000*7A"
+
+// Parse the GGA string into a message object:
+gga-message/Gga := (nmea-parser.from-string gga-message-string) as Gga
+
+// Use the converter:
+lat-degrees/float := NmeaParser.dm-to-degrees gga-message.latitude gga-message.latitude-n
+lon-degrees/float := NmeaParser.dm-to-degrees gga-message.longitude gga-message.longitude-e
+
+// Print to show differences:
+print "Latitude:  $gga-message.latitude($gga-message.latitude-n) = $lat-degrees"
+print "Longitude: $gga-message.longitude($gga-message.longitude-e) = $lon-degrees"
+
+// results in:
+// Latitude:  927.68263000000001739(N) = 9.4613771666666668381
+// Longitude: 10002.646140000000742(E) = 100.0441023333333419
+
 ```
 
 ### Multipart messages
