@@ -20,6 +20,8 @@ class NmeaUbxParser:
     "P$Ubx00.ID": :: | talker payload | Ubx00.private_ payload,
     "P$Ubx03.ID": :: | talker payload | Ubx03.private_ payload,
     "P$Ubx04.ID": :: | talker payload | Ubx04.private_ payload,
+    // P$UBX,40 cannot be polled for and is not emitted. (Use .set constructor.)
+    // P$UBX,41 cannot be polled for and is not emitted. (Use .set constructor.)
   }
 
 
@@ -50,7 +52,7 @@ class Ubx00 extends NmeaMessage:
 
   /** Message content asks the receiver for a UBX00 with data. */
   constructor.poll:
-    super.private_ "P" ID ["PUBX","$ID"]
+    super.private_ "P" ID ["PUBX","00"]
 
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
@@ -118,6 +120,7 @@ PUBX03: Contains satellite status information.
 */
 class Ubx03 extends NmeaMessage:
   static ID ::= "UBX,03"
+  satellites_/List := []
 
   /** Message content asks the receiver for a UBX03 with data. */
   constructor.poll:
@@ -125,14 +128,68 @@ class Ubx03 extends NmeaMessage:
 
   constructor.private_ payload/List:
     super.private_ "P" ID payload
+    satellites_ = satellite-ids
 
   is-poll -> bool:
     return payload_.size < 3
 
+  /** Number of satellites tracked. */
+  num-svs -> int?:
+    return int.parse payload_[2] --if-error=: null
+
+  satellite-ids -> List:
+    sats := List num-svs
+    num-svs.repeat: | entry |
+      ref := 3 + (entry * 6)
+      sats[entry] = payload_[ref]
+    return sats
+
+  satellite-status satellite/int -> string:
+    if satellites_.contains satellite:
+      entry := satellites_.index-of satellite
+      ref := 4 + (entry * 6)
+      return payload_[ref]
+    return ""
+
+  satellite-azimuth satellite/int -> float?:
+    if satellites_.contains satellite:
+      entry := satellites_.index-of satellite
+      ref := 5 + (entry * 6)
+      return float.parse payload_[ref] --if-error=: null
+    return null
+
+  satellite-elevation satellite/int -> float?:
+    if satellites_.contains satellite:
+      entry := satellites_.index-of satellite
+      ref := 6 + (entry * 6)
+      return float.parse payload_[ref]  --if-error=: null
+    return null
+
+  /**
+  Gives the tracked satellites' signal strength.
+  */
+  satellite-cno satellite/int -> float?:
+    if satellites_.contains satellite:
+      entry := satellites_.index-of satellite
+      ref := 7 + (entry * 6)
+      return float.parse payload_[ref]  --if-error=: null
+    return null
+
+  /**
+  Satellite carrier lock time.
+  */
+  satellite-lock satellite/int -> float?:
+    satellites := satellite-ids
+    if satellites.contains satellite:
+      entry := satellites.index-of satellite
+      ref := 7 + (entry * 6)
+      return float.parse payload_[ref]  --if-error=: null
+    return null
+
   stringify -> string:
     if is-poll:
       return "$super: poll"
-    return  "$super: "
+    return  "$super: sats:$(satellite-ids.join ",")"
 
 
 /**
@@ -145,15 +202,84 @@ Gives information on precise time, logging, synchronization, and PPS alignment.
 class Ubx04 extends NmeaMessage:
   static ID ::= "UBX,04"
 
-  /** Not expected - leaving here until test of this function. */
+  constructor.poll:
+    super.private_  "P" ID ["PUBX","04"]
+
   constructor.private_ payload/List:
     super.private_  "P" ID payload
 
+  is-poll -> bool:
+    return payload_.size < 3
 
+  /**
+  Returns the UTC time.
+  */
+  time -> Time?:
+    if payload_[3] == "" or payload_[2] == "":
+      return null
+    return Time.utc
+      --year=(int.parse (payload_[3][4..]))
+      --month=(int.parse (payload_[3][2..4]))
+      --day=(int.parse (payload_[3][0..2]))
+      --h=(int.parse (payload_[2])[0..2])
+      --m=(int.parse (payload_[2])[2..4])
+      --s=(int.parse (payload_[2])[4..6])
+      --ms=(int.parse (payload_[2])[7..])
+
+  /**
+  Returns the UTC time of week.
+
+  See Receiver documentation for the meaning of this value.  GPS time is sent as
+    the number of seconds since the previous sunday midnight.
+  */
+  time-of-week -> float?:
+    return float.parse payload_[4] --if-error=: null
+
+  week-number -> int?:
+    return int.parse payload_[5] --if-error=: null
+
+  is-leap-seconds-default -> bool:
+    return payload_[6].contains "D" ? true : false
+
+  /**
+  Returns the number of leap seconds.
+
+  If the value is the firmware default, $is-leap-seconds-default will be true.
+    If $is-leap-seconds-default is false, the valuehas been received from a
+    satellite.
+  */
+  leap-seconds -> int?:
+    return int.parse (payload_[6].replace "D" "") --if-error=: null
+
+  clock-bias -> int?:
+    return int.parse payload_[7] --if-error=: null
+
+  clock-drift -> float?:
+    return float.parse payload_[8] --if-error=: null
+
+  /**
+  Returns the Time-Pulse granularity, in ns.
+
+  This is the quantization error of the TIMEPULSE pin.
+  */
+  time-pulse-granularity -> int?:
+    return int.parse payload_[8] --if-error=: null
+
+  stringify -> string:
+    if is-poll:
+      return "$super: poll"
+    list:= ["time:$time"]
+    list.add "bias:$clock-bias"
+    list.add "drift:$clock-drift"
+    return  "$super: $(list.join "|")"
 
 
 /**
 PUBX40: RATE. Set NMEA message output rates etc.
+
+End rate is relative to the event a message is registered on. For example, if
+  the rate of a navigation message is set to 2, the message is sent every second
+  navigation solution.
 */
 class Ubx40 extends NmeaMessage:
   static ID ::= "UBX,40"
@@ -170,6 +296,10 @@ class Ubx40 extends NmeaMessage:
     FIELD-USB_: "USB",
     FIELD-SPI_: "SPI"
   }
+
+  // Cannot be polled for?
+  constructor.poll:
+    super.private_  "P" ID ["PUBX","40"]
 
   constructor.set type/string
       --ddc-rate/int?=null

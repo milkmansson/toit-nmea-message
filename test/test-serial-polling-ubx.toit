@@ -31,7 +31,7 @@ main:
   driver := Driver port.in port.out nmea-parser
   print "Driver started..."
 
-  print "Stopping message noise..."
+  print "Stopping message noise... (1xGGA / 10sec)"
   disable-gsv := Ubx40.set "GSV" --uart1-rate=0
   driver.send-message disable-gsv
   disable-gsa := Ubx40.set "GSA" --uart1-rate=0
@@ -42,19 +42,21 @@ main:
   driver.send-message disable-vtg
   disable-gll := Ubx40.set "GLL" --uart1-rate=0
   driver.send-message disable-gll
-
-  // Allow GGA at default rate to show something is still there
-  disable-gga := Ubx40.set "GGA" --uart1-rate=5
+  disable-gga := Ubx40.set "GGA" --uart1-rate=10
   driver.send-message disable-gga
 
 
+  print "Sending Poll for \$PUBX,00: Navigation Information..."
+  nav-info := Ubx00.poll
+  driver.send-message nav-info
 
-  /*
-  print "Sending factory reset..."
-  factory-reset := Cas10.set Cas10.START-FACTORY
-  driver.send-message factory-reset
-  sleep --ms=500
-  */
+  print "Sending Poll for \$PUBX,03: Satellite Information..."
+  satellite-info := Ubx03.poll
+  driver.send-message satellite-info
+
+  print "Sending Poll for \$PUBX,04: Time and Date..."
+  time-date := Ubx04.poll
+  driver.send-message time-date
 
   /*
   // Leave one going to know that the device is still there...

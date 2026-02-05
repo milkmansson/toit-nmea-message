@@ -184,7 +184,8 @@ abstract class NmeaMessage:
   id_/string
   payload_/List
 
-  constructor.private_ .talker/string .id_/string .payload_/List:
+  constructor.private_ .talker/string id/string .payload_/List:
+    id_ = id.replace "," ""
 
   /** Whether this message is a poll. */
   is-poll -> bool:
@@ -210,7 +211,7 @@ abstract class NmeaMessage:
 
   /** Full Message Name. */
   full-name -> string:
-    return "NMEA-$talker-$ID"
+    return "NMEA-$talker-$id_"
 
   /** Provides access to raw data in all fields (parsed or not). */
   raw -> List:
