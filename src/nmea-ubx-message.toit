@@ -107,13 +107,26 @@ class Ubx00 extends NmeaMessage:
   vertical-velocity -> float:
     return float.parse payload_[13] --if-error=: 0.0
 
+  h-dop -> float:
+    return float.parse payload_[15] --if-error=: 0.0
+
+  v-dop -> float:
+    return float.parse payload_[16] --if-error=: 0.0
+
+  t-dop -> float:
+    return float.parse payload_[17] --if-error=: 0.0
+
   num-svs -> int:
     return int.parse payload_[18] --if-error=: 0
 
   stringify -> string:
     if is-poll:
       return "$super: poll"
-    return  "$super: "
+    list := []
+    list.add "lat:$latitude($latitude-n)"
+    list.add "lon:$longitude($longitude-e)"
+    list.add "accuracy:$(%0.3f h-accuracy)/$(%0.3f v-accuracy)"
+    return  "$super: $(list.join "|")"
 
 
 /**

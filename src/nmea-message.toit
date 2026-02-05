@@ -65,7 +65,6 @@ class NmeaParser:
   static ANT ::= "ANT" // Antenna Information.
   static LPS ::= "LPS" // Leap Second Information.
   static UTC ::= "UTC" // Receiver status, simplified information for leap second correction.
-  static GST ::= "GST" // Measurement accuracy details for receiver pseudoranges.
   static INS ::= "INS" // Inertial Navigation System (INS) information.
   */
 
@@ -82,6 +81,7 @@ class NmeaParser:
     Gns.ID: :: | talker payload | Gns.private_ talker payload,
     Gbs.ID: :: | talker payload | Gbs.private_ talker payload,
     Mss.ID: :: | talker payload | Mss.private_ talker payload,
+    Gst.ID: :: | talker payload | Gst.private_ talker payload,
   }
 
   constructor --proprietary-messages/Map?=null:
@@ -160,6 +160,25 @@ class NmeaParser:
     data.do: | next |
       checksum ^= next
     return checksum
+
+  /**
+  Converts GNSS native forms of Lat/Long to methematical form.
+
+  Most GNSS devices will natively use degrees-minutes N/S|E/W.  However, maps
+    math libraries typically want a single floating point number.  The number
+    will be -90 <= x <= 90, with with North = +ve, South = -ve and East = +ve,
+    West = -ve.
+  */
+  static dm-to-degrees value/float hemisphere/string -> float:
+    hemisphere-values := ["N","S","E","W"]
+    assert: hemisphere-values.contains hemisphere
+    degrees := (value / 100).floor
+    minutes := value - (degrees * 100)
+    math-degrees := degrees + (minutes / 60.0)
+
+    if hemisphere == "S" or hemisphere == "W":
+      math-degrees = -math-degrees
+    return math-degrees
 
   /**
   Adds the message types (and their approprate constructors) from extensions.
@@ -301,12 +320,18 @@ class Gga extends NmeaMessage:
   utc-string -> string:
     return payload_[1]
 
+  /**
+  Latitude, in DDMM.MMMMM format. ($latitude-n for N/S.)
+  */
   latitude -> float:
     return float.parse payload_[2]
 
   latitude-n -> string:
     return payload_[3]
 
+  /**
+  Longitude, in DDDMM.MMMMM format. ($longitude-e for E/W.)
+  */
   longitude -> float:
     return float.parse payload_[4]
 
@@ -714,7 +739,7 @@ class Gsa extends NmeaMessage:
   stringify -> string:
     sats/List := satellites.copy
     sats.remove --all ""
-    sats-string/string := sats.size > 0 ? sats : "NONE"
+    sats-string/string := sats.size > 0 ? sats.join "," : "NONE"
     return  "$super: $system-id:$sats-string"
 
 /**
