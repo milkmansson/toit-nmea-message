@@ -79,6 +79,7 @@ class Cas01 extends NmeaMessage:
 
   constructor.set baudrate/int:
     nearest := nearest-baud_ baudrate
+    if nearest != baudrate: print "Clamping baudrate to nearest: $nearest baud"
     super.private_ "P" ["P$ID", BAUD-CODE_[nearest]]
 
   /** Not expected - leaving here until test of this function. */
@@ -98,6 +99,9 @@ class Cas01 extends NmeaMessage:
         best = candidate
         best-diff = diff
     return best
+
+  stringify -> string:
+    return  "$super: baudrate:$BAUD-LOOKUP_[payload_[1]]"
 
 /**
 CAS02: Set positioning update rate.
