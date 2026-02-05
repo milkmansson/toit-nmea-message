@@ -184,6 +184,12 @@ abstract class NmeaMessage:
   id_/string
   payload_/List
 
+  //** Creates a standard poll for MSS from the specified talker id. */
+  // May remove because not all derivative message types allow polling.
+  //constructor.poll --.talker=NmeaParser.GPS:
+  //  id_ = "Q"
+  //  payload_ = ["$(talker)Q",ID]
+
   constructor.private_ .talker/string id/string .payload_/List:
     id_ = id.replace "," ""
 
@@ -285,8 +291,9 @@ class Gga extends NmeaMessage:
     QUALITY-ESTIMATE-GNSS-FIX: "Estimate/Dead Reckoning Fix",
   }
 
+  /** Creates a standard poll for GGA from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -341,8 +348,9 @@ ZDA: Date & time + local zone offset. (Some data also visible from RMC.)
 class Zda extends NmeaMessage:
   static ID ::= "ZDA"
 
+  /** Creates a standard poll for ZDA from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -389,8 +397,9 @@ class Vtg extends NmeaMessage:
     POS-MODE-MANUAL: "Manual"
   }
 
+  /** Creates a standard poll for VTG from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -450,12 +459,20 @@ class Rmc extends NmeaMessage:
     POS-MODE-MANUAL: "Manual"
   }
 
+  /** Creates a standard poll for RMC from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
 
+  /**
+  Returns UTC timestamp of the message.
+
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA for this.
+  */
   timestamp -> string?:
     if payload_[1] == "": return null
     return payload_[1]
@@ -559,8 +576,9 @@ class Gll extends NmeaMessage:
     POSITION-MODE-RTK-FIXED: "RTK Fixed",
   }
 
+  /** Creates a standard poll for GLL from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -577,9 +595,16 @@ class Gll extends NmeaMessage:
   longitude-e -> string:
     return payload_[4]
 
-  timestamp -> string:
-    return payload_[5]
+  /**
+  Returns UTC timestamp of the message.
 
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA for this.
+  */
+  timestamp -> string?:
+    if payload_[5] == "": return null
+    return payload_[5]
 
   /**
   */
@@ -641,8 +666,9 @@ class Gsa extends NmeaMessage:
     SYSTEM-ID-QZSS: "QZSS"
   }
 
+  /** Creates a standard poll for GSA from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -710,8 +736,9 @@ Some manufacturers will produce several messages, with different talker ID's to
 class Gsv extends NmeaMessage:
   static ID ::= "GSV"
 
+  /** Creates a standard poll for GSV from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -786,12 +813,20 @@ class Gns extends NmeaMessage:
     QUALITY-ESTIMATE-GNSS-FIX: "Estimate/Dead Reckoning Fix",
   }
 
+  /** Creates a standard poll for GNS from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
 
+  /**
+  Returns UTC timestamp of the message.
+
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA for this.
+  */
   timestamp -> string?:
     if payload_[1] == "": return null
     return payload_[1]
@@ -819,16 +854,16 @@ class Gns extends NmeaMessage:
     return int.parse payload_[7]
 
   /**
-  Horizontal dilution-of-precision.
+  Horizontal Dilution-Of-Precision (DOP).
 
   If all satellites are clustered together, small timing errors can become
-    large position errors.  A high DOP is bad, and is a multiplier on
-    measurement error.
+    large position errors.  A high DOP represents satellites clumped together,
+    higher is worse.  It is effectively a multiplier on measurement error.
   */
   horizontal-dop -> int:
     return int.parse payload_[8]
 
-  /** Altitude */
+  /** Present altitude of the receiver. */
   altitude -> float:
     return float.parse payload_[9]
 
@@ -852,6 +887,7 @@ class Gns extends NmeaMessage:
 
 /**
 GBS: Receiver Autonomous Integrity Monitoring Algorithm (RAIM) results.
+  (Fault Detection.)
 
 The fields $err-latitude, errLon and errAlt output the standard deviation of the
   position calculation, using all satellites which pass the RAIM test successfully.
@@ -869,8 +905,9 @@ The fields prob, bias and stdev are only output if at least one satellite
 class Gbs extends NmeaMessage:
   static ID ::= "GBS"
 
+  /** Creates a standard poll for GBS from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -889,7 +926,7 @@ class Gbs extends NmeaMessage:
   /**
   Expected error in latitude (in meters).
 
-  null if RAIM failed.
+  This value is null if RAIM failed.
   */
   err-latitude -> float?:
     return float.parse payload_[2] --if-error=: null
@@ -897,7 +934,7 @@ class Gbs extends NmeaMessage:
   /**
   Expected error in longitude (in meters).
 
-  null if RAIM failed.
+  This value is null if RAIM failed.
   */
   err-longitude -> float?:
     return float.parse payload_[3] --if-error=: null
@@ -905,7 +942,7 @@ class Gbs extends NmeaMessage:
   /**
   Expected error in altitude (in meters).
 
-  null if RAIM failed.
+  This value is null if RAIM failed.
   */
   err-altitude -> float?:
     return float.parse payload_[4] --if-error=: null
@@ -913,7 +950,7 @@ class Gbs extends NmeaMessage:
   /**
   SVID of most likely failed satellite.
 
-  null if no satellites failed in RAIM test.
+  This value is null if _no_ satellites failed in RAIM testing.
 
   Satellite IDs (SVIDs) are mapped to a 00-99 value to stay within
     specification.  PRNs (the actual satellite ID) are mapped/tracked
@@ -926,7 +963,7 @@ class Gbs extends NmeaMessage:
   /**
   Probability of missed detection.
 
-  Null if RAIM passed, or unsupported.
+  This value is null if RAIM passed, or if unsupported.
   */
   probability -> float?:
     return float.parse payload_[6] --if-error=: null
@@ -934,18 +971,17 @@ class Gbs extends NmeaMessage:
   /**
   Estimate on most likely failed satellite (a priori residual).
 
-  Null if RAIM passed, or unsupported.
+  This value is null if RAIM passed, or if unsupported.
   */
   bias -> float?:
     return float.parse payload_[7] --if-error=: null
 
   /** Standard deviation (in meters).
 
-  null if RAIM passed, or unsupported.
+  This value is null if RAIM passed, or if unsupported.
   */
   standard-deviation -> float?:
     return float.parse payload_[8] --if-error=: null
-
 
 
 /**
@@ -958,8 +994,9 @@ Report on the status and quality of a DGPS radiobeacon signal.  The message
 class Mss extends NmeaMessage:
   static ID ::= "MSS"
 
+  /** Creates a standard poll for MSS from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
-    super.private_ talker ID ["$(talker)Q",ID]
+    super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
@@ -985,3 +1022,70 @@ class Mss extends NmeaMessage:
     if beacon-frequency: output.add "beacon-frequency:$(beacon-frequency)kHz"
     if channel-number: output.add "channel-number:$(channel-number)"
     return  "$super: $(output.join ":")"
+
+/**
+xxQ: Polls a standard message from a specific talker.
+
+This is implemented as .poll on all the message types, although presented here
+  as a variant for testing and troubleshooting.
+*/
+class Q extends NmeaMessage:
+  static ID ::= "Q"
+
+  constructor.poll --talker=NmeaParser.GPS --id/string:
+    super.private_ talker ID ["$(talker)Q",id]
+
+/**
+GST: GNSS Pseudo Range Error Statistics.
+
+This message reports statisical information on the quality of the position
+  solution.
+*/
+class Gst extends NmeaMessage:
+  static ID ::= "GST"
+
+  /** Creates a standard poll for MSS from the specified talker id. */
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker "Q" ["$(talker)Q",ID]
+
+  constructor.private_ talker/string payload/List:
+    super.private_ talker ID payload
+
+  /**
+  Returns UTC timestamp of the message.
+
+  It is provided in the message for use as a comparative reference to other
+    messages.  The message does not contain the date, and therefore cannot be
+    used to set the system time, or create a time object.  Use RMC, ZDA for this.
+  */
+  timestamp -> string?:
+    if payload_[1] == "": return null
+    return payload_[1]
+
+  /**  RMS value of the standard deviation of the ranges (in m). */
+  range-rms -> float?:
+    return float.parse payload_[2] --if-error=: null
+
+  /**  Standard deviation of semi-major axis (in m), if supported. */
+  standard-major -> float?:
+    return float.parse payload_[3] --if-error=: null
+
+  /**  Standard deviation of semi-minor axis (in m), if supported. */
+  standard-minor -> float?:
+    return float.parse payload_[4] --if-error=: null
+
+  /**  Orientation of the semi-major axis (in degrees), if supported. */
+  orientation -> float?:
+    return float.parse payload_[5] --if-error=: null
+
+  /**  Standard Deviation of the latitude error, if supported. */
+  latitude-err-standard-deviation -> float?:
+    return float.parse payload_[6] --if-error=: null
+
+  /**  Standard Deviation of the longitude error, if supported. */
+  longitude-err-standard-deviation -> float?:
+    return float.parse payload_[7] --if-error=: null
+
+  /**  Standard Deviation of the altitude error, if supported. */
+  altitude-err-standard-deviation -> float?:
+    return float.parse payload_[8] --if-error=: null
