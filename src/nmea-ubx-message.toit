@@ -58,6 +58,7 @@ class Ubx00 extends NmeaMessage:
   constructor.private_ payload/List:
     super.private_ "P" ID payload
 
+  /** Whether this message is a poll message. */
   is-poll -> bool:
     return payload_.size < 3
 
@@ -130,6 +131,7 @@ class Ubx03 extends NmeaMessage:
     super.private_ "P" ID payload
     satellites_ = satellite-ids
 
+  /** Whether this message is a poll message. */
   is-poll -> bool:
     return payload_.size < 3
 
@@ -137,6 +139,7 @@ class Ubx03 extends NmeaMessage:
   num-svs -> int?:
     return int.parse payload_[2] --if-error=: null
 
+  /** List of tracked satellites. */
   satellite-ids -> List:
     sats := List num-svs
     num-svs.repeat: | entry |
@@ -144,6 +147,7 @@ class Ubx03 extends NmeaMessage:
       sats[entry] = payload_[ref]
     return sats
 
+  /** Status of a tracked satellite. */
   satellite-status satellite/int -> string:
     if satellites_.contains satellite:
       entry := satellites_.index-of satellite
@@ -151,6 +155,7 @@ class Ubx03 extends NmeaMessage:
       return payload_[ref]
     return ""
 
+  /** Azimuth of a tracked satellite. */
   satellite-azimuth satellite/int -> float?:
     if satellites_.contains satellite:
       entry := satellites_.index-of satellite
@@ -158,6 +163,7 @@ class Ubx03 extends NmeaMessage:
       return float.parse payload_[ref] --if-error=: null
     return null
 
+  /** Elevation of a tracked satellite. */
   satellite-elevation satellite/int -> float?:
     if satellites_.contains satellite:
       entry := satellites_.index-of satellite
@@ -165,9 +171,7 @@ class Ubx03 extends NmeaMessage:
       return float.parse payload_[ref]  --if-error=: null
     return null
 
-  /**
-  Gives the tracked satellites' signal strength.
-  */
+  /** Signal Strength of a tracked satellite. */
   satellite-cno satellite/int -> float?:
     if satellites_.contains satellite:
       entry := satellites_.index-of satellite
@@ -175,9 +179,7 @@ class Ubx03 extends NmeaMessage:
       return float.parse payload_[ref]  --if-error=: null
     return null
 
-  /**
-  Satellite carrier lock time.
-  */
+  /** Lock time of a tracked satellite. */
   satellite-lock satellite/int -> float?:
     satellites := satellite-ids
     if satellites.contains satellite:
@@ -189,7 +191,9 @@ class Ubx03 extends NmeaMessage:
   stringify -> string:
     if is-poll:
       return "$super: poll"
-    return  "$super: sats:$(satellite-ids.join ",")"
+    if num-svs == 0:
+      return "$super: sats:NONE"
+    return  "$super: sats($num-svs):$(satellites_.join ",")"
 
 
 /**
@@ -208,6 +212,7 @@ class Ubx04 extends NmeaMessage:
   constructor.private_ payload/List:
     super.private_  "P" ID payload
 
+  /** Whether this message is a poll message. */
   is-poll -> bool:
     return payload_.size < 3
 
@@ -224,7 +229,7 @@ class Ubx04 extends NmeaMessage:
       --h=(int.parse (payload_[2])[0..2])
       --m=(int.parse (payload_[2])[2..4])
       --s=(int.parse (payload_[2])[4..6])
-      --ms=(int.parse (payload_[2])[7..])
+      --ms=(int.parse (payload_[2])[7..] --if-error=: 0)
 
   /**
   Returns the UTC time of week.
@@ -251,9 +256,26 @@ class Ubx04 extends NmeaMessage:
   leap-seconds -> int?:
     return int.parse (payload_[6].replace "D" "") --if-error=: null
 
+  /**
+  Gives current clock bias.
+
+  Clock Bias is an estimate of far off the receiver’s clock is from the actual
+    time given by the satellites.
+
+  If $clock-bias is 'how late am I?' then $clock-drift is 'how fast am I becoming
+    later?'
+  */
   clock-bias -> int?:
     return int.parse payload_[7] --if-error=: null
 
+  /**
+  Gives current clock drift.
+
+  Clock drift is how fast the clock bias is changing.
+
+  If $clock-bias is 'how late am I?' then $clock-drift is 'how fast am I becoming
+    later?'
+  */
   clock-drift -> float?:
     return float.parse payload_[8] --if-error=: null
 

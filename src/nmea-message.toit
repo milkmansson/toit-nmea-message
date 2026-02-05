@@ -200,7 +200,7 @@ abstract class NmeaMessage:
 
   If message is multipart, $message-part[0] is this messages number, of a total
     of $message-part[1] messages.  Defaults to [1,1] as by default, messages
-    are not multipart.
+    are complete, and therefore do not have multiple parts.
   */
   message-part -> List:
     return [1, 1]
