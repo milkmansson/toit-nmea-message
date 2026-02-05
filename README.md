@@ -1,9 +1,9 @@
 # Toit Library for NMEA 0183 parsing for GNSS messages
 This Toit library is to add support for NMEA 0183 messages sent by most GNSS
-modules, such the Ublox NEO *M, SiRF, and ATGM336H-5N devices.  It is designed
-to be extensible, in order to add proprietary NMEA message types.  Several
-libraries of proprietary NMEA message types are supplied in the package, as well
-as opportunities for user-supplied message types.
+modules, such as the Ublox NEO *M, SiRF, and ATGM336H-5N devices.  It is
+designed to be extensible, in order to add proprietary NMEA message types.
+Several libraries of proprietary NMEA message types are supplied in the package,
+as well as opportunities for user-supplied message types.
 
 ## What is NMEA 0183?
 NMEA 0183 is a long-standing text-based communication standard defined by the
@@ -21,10 +21,11 @@ on 5 Jan 2024.
 > [!WARNING]
 > NMEA-0183 provides many other message types for other purposes.  For example,
 > "SafetyNet Vessel in distress information" (SMV), Search and Rescue
-> capabilities (RLM) are NMEA 0183 messages, but not related to GNSS, and are not
-> expected to be emitted from GNSS devices.  Whilst they are currently not
-> implemented, this pasrser could be extended to support other types if/when
-> use cases appear.
+> capabilities (RLM) are valid NMEA 0183 messages, but not related to GNSS, and
+> are not implementd as they are not expected to be emitted from GNSS devices.
+>
+> Despite not being implemented, this pasrser could be extended to support
+> these types if/when use cases appear.
 
 ### NMEA Versions:
 - GPS/SBAS: NMEA 2.3+
@@ -45,8 +46,8 @@ onboard marine networking, while NMEA 0183 remains common at the edges of
 systems (simple GPS modules, legacy devices, low-cost sensors).
 
 ## What is a binary parser? Why not use that instead?
-Using the binary parser for the specific device is completely possible. To compare:
-NMEA is:
+Using the binary parser for the specific device is completely possible. To
+compare, NMEA is:
 - human-readable
 - lossy
 - slow
@@ -125,8 +126,10 @@ print "Longitude: $gga-message.longitude($gga-message.longitude-e) = $lon-degree
 // results in:
 // Latitude:  927.68263000000001739(N) = 9.4613771666666668381
 // Longitude: 10002.646140000000742(E) = 100.0441023333333419
-
 ```
+(This example uses a static text message to demonstrate the conversion.  Under
+normal circumstances the driver would obtain the GGA messages from the GNSS
+device.)
 
 ### Multipart messages
 All messages have the function `is-multipart`.  This is false by default, but is
@@ -176,8 +179,8 @@ imported/downloaded to the ESP32 when using just one device type.
 > [!WARNING]
 > The driver aims to have the widest capability.  For example, if you have a
 > clone device that supports fewer options, the driver will not know and will
-> likely allow options that your device may not practically support.  (eg, the
-> interface may allow a baud rate in a configuration message that your device
+> likely allow options that your device may not practically support.  (eg, this
+> package may allow a baud rate in a configuration message that your device
 > does not allow.)  Check your datasheet when coding configurations.
 
 ## Caveats
