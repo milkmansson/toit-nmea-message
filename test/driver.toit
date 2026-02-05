@@ -92,7 +92,6 @@ class Driver:
       runner_.cancel
       runner_ = null
 
-
   /** Send a raw byte array to the device, for debug purposes. */
   send-byte-array bytes/ByteArray -> none:
     logger_.debug "SEND  <-" --tags={"bytes" : bytes}
