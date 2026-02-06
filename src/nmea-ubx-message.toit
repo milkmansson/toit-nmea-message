@@ -143,7 +143,7 @@ class Ubx03 extends NmeaMessage:
   constructor.private_ payload/List:
     super.private_ "P" ID payload
     satellites_ = satellite-ids
-    if payload_.size <= (num-svs * 6) + 3 + 1:
+    if payload_.size < (num-svs * 6) + 3:
       throw "not enough fields for this many sattelites"
 
   /** Whether this message is a poll message. */
