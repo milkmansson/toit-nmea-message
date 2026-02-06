@@ -44,7 +44,7 @@ LONG-PUBX03 := "\$PUBX,03,21,5,U,014,29,46,064,6,e,109,02,24,000,11,U,077,29,23,
 WEIRD-1 := "\$GPRMC,123519,A,,,,,,230394,,*08"
 
 // Lowercase talker: rarely seen, but valid according to the spec.
-WEIRD-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*48"
+WEIRD-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
 
 // BAD:
 
