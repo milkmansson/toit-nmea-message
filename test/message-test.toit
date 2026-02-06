@@ -131,15 +131,18 @@ main:
 
   print nmea-parser.registry.keys
 
-  GOOD-LIST.do:
-    print " - Doing $it"
+  test-message2 := nmea-parser.from-string LONG-PUBX03
 
-    // Test that item parses OK:  (Why doesn't this work??)
-    //expect-no-throw : test-message := nmea-parser.from-string it
+  GOOD-LIST.do: | line |
+    print " - Doing $line"
+
+    // Test that item parses OK:
+    expect-no-throw:
+      test-message := nmea-parser.from-string line
 
     // Test the test sentences convert to a message and then back to a sentence:
-    test-message := nmea-parser.from-string it
-    expect-identical it test-message.to-string
+    test-message := nmea-parser.from-string line
+    expect-identical line test-message.to-string
 
   BAD-LIST.do:
     print " - Doing $it"

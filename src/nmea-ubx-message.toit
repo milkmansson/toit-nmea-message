@@ -143,20 +143,26 @@ class Ubx03 extends NmeaMessage:
   constructor.private_ payload/List:
     super.private_ "P" ID payload
     satellites_ = satellite-ids
+    if payload_.size <= (num-svs * 6) + 3 + 1:
+      throw "not enough fields for this many sattelites"
 
   /** Whether this message is a poll message. */
   is-poll -> bool:
     return payload_.size < 3
 
   /** Number of satellites tracked. */
-  num-svs -> int?:
-    return int.parse payload_[2] --if-error=: null
+  num-svs -> int:
+    return int.parse payload_[2] --if-error=: 0
 
   /** List of tracked satellites. */
   satellite-ids -> List:
+    svs := num-svs
+    if num-svs < 1:
+      return []
     sats := List num-svs
     num-svs.repeat: | entry |
       ref := 3 + (entry * 6)
+      print "$entry $ref"
       sats[entry] = payload_[ref]
     return sats
 
@@ -197,7 +203,7 @@ class Ubx03 extends NmeaMessage:
     satellites := satellite-ids
     if satellites.contains satellite:
       entry := satellites.index-of satellite
-      ref := 7 + (entry * 6)
+      ref := 8 + (entry * 6)
       return float.parse payload_[ref]  --if-error=: null
     return null
 

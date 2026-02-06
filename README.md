@@ -101,10 +101,11 @@ on the [Toit package registry](http://pkg.toit.io).
 
 ### Lat/Lon output
 According to the NMEA standard, latitude and longitude are output in the format
-degrees, minutes and (decimal) fractions of minutes. To convert to degrees and
+**degrees, minutes and (decimal) fractions of minutes**. To convert to degrees and
 fractions of degrees, or degrees, minutes, seconds and fractions of seconds, the
 minutes and fractional minutes parts need to be converted.  The main NmeaParser
-library contains a helper function for this:
+library contains a helper function for conversion to degrees/fractions of
+degrees:
 ```Toit
 // Create parser object:
 nmea-parser := NmeaParser
