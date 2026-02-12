@@ -50,13 +50,16 @@ fields based on 4.0:
 - Adding a `signalId` item to the GSV message.
 - Adding a `navStatus` item to the RMC message.
 
-For the reasons above this driver:
+For reasons associated with these points, this driver:
 - Stores the entire sentence per message, even if the driver doesn't naturally
-have a method for the required information.  Raw data can be accessed using
-`.raw` on all message types.  This is a view to the data payload, and the
-interesting field in the message can be accessed using `message.raw[xx]`
-- If there is no data in a field, output will be `null` for numeric fields, or
-"" (empty string) for string fields.
+provide access via a specific method for the required information.  This (raw)
+data can be accessed using `.raw` on all message types.  This is a view to the
+data payload, and an interesting field in the message can be accessed using
+`message.raw[xx]`.
+- Before a fix is ready, data may not be available for a field in a given
+message.  (This is also possible if NMEA version dictates support for a field
+is removed.)  If there is no data in a field in a given message, output will be
+`null` for numeric fields, or "" (empty string) for string fields.
 
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
