@@ -169,7 +169,7 @@ In this way, the code used for all supported devices does not need to be
 imported/downloaded to the ESP32 when using just one device type.
 
 ### NMEA message libraries:
-| Identifier | Vendor/Protocol | Import library | Example Modules |
+| Identifier | Vendor/Protocol | Import library | Modules |
 | - | - | -  | - |
 | `$nnxxx`   | NMEA 0183 standard   | `nmea-message` | Base parser/library, with common message types.  Many/most modules support these NMEA messages.  |
 | `$PCASxx`  | CASIC (proprietary)  | `nmea-casic-message` | - ATGM336H <br> - AT6558 Silicon |
@@ -187,11 +187,11 @@ imported/downloaded to the ESP32 when using just one device type.
 
 ## Caveats
 Driver initially developed using
-- ATGM336H 5N-31 C92310, a GNSS+GPS+BD based device.  Supports only 8 NMEA
-message types (GGA,GLL,GSA,GSV,RMC,VTG,ZDA,TXT) and has up to 12 proprietary
-types, depending on software version.  It supports the CASIC binary message
+- ATGM336H 5N-31 C92310, a GPS/SBAS/QZSS/GLONASS/Beidou based device.  Supports
+8 NMEA message types (GGA,GLL,GSA,GSV,RMC,VTG,ZDA,TXT) and has up to 12
+(depending on firmware) proprietary types.  It supports the CASIC binary message
 format.
-- Ublox NEO 7M, a GNSS+GPS+BD device. Supports 16 NMEA messages and 5
+- Ublox NEO 7M, a GPS/QZSS/GLONASS device. Supports 16 NMEA messages and 5
 proprietary NMEA messages, alongside UBX's proprietary binary message format.
 - Other types of devices have had less testing so far.  Please log an
 [issue](./issues) for assistance in adding more.
