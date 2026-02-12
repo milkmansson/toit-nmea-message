@@ -59,8 +59,9 @@ data payload, and an interesting field in the message can be accessed using
 `message.raw[xx]`.
 - Before a fix is ready, data may not be available for a field in a given
 message.  (This is also possible if NMEA version dictates support for a field
-is removed.)  If there is no data in a field in a given message, output will be
-`null` for numeric fields, or "" (empty string) for string fields.
+is removed, or if a device doesn't provide that data.)  If there is no data in
+a field in a given message, output will be `null` for numeric fields, or ""
+(empty string) for string fields.
 
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
