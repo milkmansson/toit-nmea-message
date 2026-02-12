@@ -151,8 +151,9 @@ user created extensions.
 > project would usually only have one GNSS device physically attached,
 > proprietary parser libraries are provided as extensions.
 
-Example: Initialise the library, add the UBX proprietary messages, displaying
-the difference before and after:
+Example: Initialise the library, add the extension for UBX proprietary messages.
+Display the difference of recognised messages, before and after adding the
+extension:
 ```Toit
 // Initial setup omitted, see Examples.
 nmea-parser := NmeaParser
@@ -170,7 +171,7 @@ imported/downloaded to the ESP32 when using just one device type.
 ### NMEA message libraries:
 | Identifier | Vendor/Protocol | Import library | Example Modules |
 | - | - | -  | - |
-| `$nnxxx`   | NMEA 0183 standard   | `nmea-message` | Many/most modules support NMEA.  |
+| `$nnxxx`   | NMEA 0183 standard   | `nmea-message` | Base parser/library, with common message types.  Many/most modules support these NMEA messages.  |
 | `$PCASxx`  | CASIC (proprietary)  | `nmea-casic-message` | - ATGM336H <br> - AT6558 Silicon |
 | `$PUBX,xx` | uBlox (proprietary)  | `nmea-ubx-message` | - Ubx NEO M6,M7,etc <br> - Other UBX Compatible |
 | `$PGRMx`   | Garmin (proprietary) | `nmea-grm-message` | untested |
@@ -180,16 +181,19 @@ imported/downloaded to the ESP32 when using just one device type.
 > [!WARNING]
 > The driver aims to have the widest capability.  For example, if you have a
 > clone device that supports fewer options, the driver will not know and will
-> likely allow options that your device may not practically support.  (eg, this
+> likely allow options that your device may not support.  (eg, this
 > package may allow a baud rate in a configuration message that your device
 > does not allow.)  Check your datasheet when coding configurations.
 
 ## Caveats
-Driver initially developed using ATGM336H 5N-31 C92310, a GNSS+GPS+BD based
-device.  It supports only 6 NMEA message types (GGA,GLL,GSA,GSV,RMC,
-VTG,ZDA,TXT), but supports CASIC proprietary NMEA messages for configuration,
-and the CASIC binary message format.
-Other types of devices have had less testing so far.  Please log an
+Driver initially developed using
+- ATGM336H 5N-31 C92310, a GNSS+GPS+BD based device.  Supports only 8 NMEA
+message types (GGA,GLL,GSA,GSV,RMC,VTG,ZDA,TXT) and has up to 12 proprietary
+types, depending on software version.  It supports the CASIC binary message
+format.
+- Ublox NEO 7M, a GNSS+GPS+BD device. Supports 16 NMEA messages and 5
+proprietary NMEA messages, alongside UBX's proprietary binary message format.
+- Other types of devices have had less testing so far.  Please log an
 [issue](./issues) for assistance in adding more.
 
 ## Links:
