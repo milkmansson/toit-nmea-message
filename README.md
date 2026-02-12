@@ -30,7 +30,7 @@ on 5 Jan 2024.
 ### NMEA Versions:
 What matters is the version of NMEA that is output from the device - many
 devices are not user upgradeable.  To give an idea, if your device supports the
-following, the bare minimum NMEA version that the device needs to speak will
+following, the (minimum) NMEA version that the device speaks will
 likely be:
 - GPS/SBAS: NMEA 2.3+
 - GLONASS: NMEA 2.3+
@@ -42,13 +42,13 @@ The updates to NMEA versions either add new fields to the end of existing
 sentences, or stop putting data into existing fields.  To illustrate, the main
 differences between NMEA 2.2 and 2.3/4.0 are:
 - The item of positioning mode (Mode) is no longer output in GLL, RMC and VTG sentences.
-- For the positioning quality (FS) item in the GGA statement, 1 is used for both dead reckoning and normal positioning
+- For the positioning quality (FS) item in the GGA sentence, 1 is used for both dead reckoning and normal positioning.
 
 Aside from the additional systems supported, the NMEA 4.1 protocol adds some
 fields based on 4.0:
-- Add a systemId item to the GSA statement.
-- Add a signalId item to the GSV statement.
-- Add a navStatus item to the RMC statement.
+- Adding a `systemId` item to the GSA message.
+- Adding a `signalId` item to the GSV message.
+- Adding a `navStatus` item to the RMC message.
 
 For the reasons above this driver:
 - Stores the entire sentence per message, even if the driver doesn't naturally
