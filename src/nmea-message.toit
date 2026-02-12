@@ -96,14 +96,14 @@ class NmeaParser:
     sentence/string ::= io-reader.read-line
     return from-string sentence
 
-  from-string sentence/string --ignore-checksum/bool=false -> NmeaMessage:
+  from-string sentence/string --ignore-checksum/bool=false --show-checksum/bool=false -> NmeaMessage:
     if sentence[0] != '$':
       throw "$INVALID-NMEA-MESSAGE_: sentence first char not \$"
 
     if not sentence.contains-only-ascii:
       throw "$INVALID-NMEA-MESSAGE_: sentence not completely ascii"
 
-    if not ignore-checksum and not validate-checksum_ sentence:
+    if not ignore-checksum and not validate-checksum_ sentence --show=show-checksum:
       throw "$INVALID-NMEA-MESSAGE_: sentence checksum invalid"
 
     cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
@@ -134,25 +134,35 @@ class NmeaParser:
     if registry_.contains id:
       return registry_[id].call type[0..1] (sentence[1..end].split DELIMITER_)
 
-    throw "Unknown message type '$id'"
+    throw "$INVALID-NMEA-MESSAGE_: Unknown message type '$id'"
 
   /**
   Validates the message is valid against it's checksum.
   */
-  static validate-checksum_ sentence/string -> bool:
+  static validate-checksum_ sentence/string --show/bool=false -> bool:
     cs-delimiter := sentence.index-of CHECKSUM-DELIMITER_ --last
 
-    // If checksum is missing, return a pass. (No CS is allowed in the spec).
+    // If checksum is missing, return a pass. (Having no CS is allowed in the spec).
     if cs-delimiter == -1 : return true
 
     // Get the text being checksummed [$..*] (exclusive).
-    message := sentence[1..cs-delimiter]
+    message-text := sentence[1..cs-delimiter]
 
     // Retrieve text after the * and parse as hex.
-    checksum := int.parse (sentence[(cs-delimiter+1)..])  --radix=16
+    message-checksum/int? := int.parse (sentence[(cs-delimiter+1)..]) --radix=16 --if-error=: null
+    calculated-checksum := compute-checksum_ message-text
 
-    // Compare and return.
-    return (compute-checksum_ message) == checksum
+    // If not debugging return (quickly).
+    equal/bool := message-checksum == calculated-checksum
+    if not show: return equal
+
+    // Debugging path:
+    if equal:
+      print "$sentence has correct checksum."
+      return true
+
+    print "$sentence should have checksum 0x$(%02x calculated-checksum)."
+    return false
 
   /**
   NMEA checksum is XOR of all characters between $ and * (exclusive).

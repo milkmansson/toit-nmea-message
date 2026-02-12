@@ -44,7 +44,7 @@ LONG-PUBX03 := "\$PUBX,03,21,5,U,014,29,46,064,6,e,109,02,24,000,11,U,077,29,23,
 WEIRD-1 := "\$GPRMC,123519,A,,,,,,230394,,*08"
 
 // Lowercase talker: rarely seen, but valid according to the spec.
-WEIRD-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
+WEIRD-2 := "\$gprmc,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*48" //68
 
 // BAD:
 
@@ -57,38 +57,47 @@ BAD-CKS := "\$PUBX,00,123519,4807.038,N,01131.000,E,545.4,G3,2.5,3.1,0.0,0.0,0.0
 // Truncated Sentence:
 BAD-TRUNC-1 := "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9"
 
-// Truncated after *
+// Truncated after *:
 BAD-TRUNC-2 := "\$GPVTG,054.7,T,034.4,M,005.5,N,010.2,K*"
 
 // Garbage before valid sentence:
 BAD-GARBAGE-1 := "xyz123!!!\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
 
-// Binary junk prefix
+// Binary junk prefix:
 BAD-GARBAGE-2 := "\x00\xFF\x13\x7E\$GPGLL,4916.45,N,12311.12,W,225444,A,*1D"
 
-// Valid prefix, invalid body
-BAD-BODY := "\$GPXYZ,1,2,3,4,5*3B"
+// Valid talker, invalid message type:
+BAD-BODY := "\$GPXYZ,1,2,3,4,5*51" // 3B
 
 // PUBX with unknown subid
 BAD-SUBID := "\$PUBX,99,foo,bar,baz*2C"
 
-// Multipart but no other part arrives
-BAD-NO-SIBLINGS := "\$GPGSV,3,1,11,07,79,048,42*5E"
+// Multipart but no other part arrives: Does not throw.
+BAD-NO-SIBLINGS := "\$GPGSV,3,1,11,07,79,048,42*48"
 
-// GSV with parts out of order
-BAD-OUT-OF-ORDER-1 := "\$GPGSV,3,2,11,15,21,315,39*5A"
-BAD-OUT-OF-ORDER-2 := "\$GPGSV,3,1,11,07,79,048,42*5E"
-BAD-OUT-OF-ORDER-3 := "\$GPGSV,3,3,11,27,05,045,30*51"
+// GSV with parts out of order:  Does not throw.
+BAD-OUT-OF-ORDER-1 := "\$GPGSV,3,2,11,15,21,315,39*42"
+BAD-OUT-OF-ORDER-2 := "\$GPGSV,3,1,11,07,79,048,42*48"
+BAD-OUT-OF-ORDER-3 := "\$GPGSV,3,3,11,27,05,045,30*4B"
 
-// Sentence split across reads
-BAD-SPLIT := "\$GPRMC,225446,A,4916.\r\n45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
+// Sentence split across reads:
+BAD-SPLIT-1-1 := "\$GPRMC,225446,A,4916."
+BAD-SPLIT-1-2 := "45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
+GOOD-SPLIT-1  := "$BAD-SPLIT-1-1$BAD-SPLIT-1-2"
+BAD-SPLIT-1   := "$BAD-SPLIT-1-1\r\n$BAD-SPLIT-1-2"
 
-// Split right after $
+// Split right after $:
 //noise noise noise$
 //GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
+BAD-SPLIT-2-1 := "\$"
+BAD-SPLIT-2-2 := "GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47"
+GOOD-SPLIT-2  := "$BAD-SPLIT-2-1$BAD-SPLIT-2-2"
+BAD-SPLIT-2   := "$BAD-SPLIT-2-1\r\n$BAD-SPLIT-2-2"
 
 // UBX collision test
-//\xb5b$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68
+UBX-BYTES := "\xb5\x62"
+RMCMSG := "\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
+UBX-COLLISION := "$UBX-BYTES$RMCMSG"
 
 // Partial UBX header, no message
 //\xb5
@@ -118,7 +127,8 @@ BAD-LIST ::= {
   BAD-GARBAGE-2,
   BAD-BODY,
   BAD-SUBID,
-  BAD-SPLIT,
+  BAD-SPLIT-1,
+  BAD-SPLIT-2,
   BAD-NO-SIBLINGS,
   BAD-OUT-OF-ORDER-1,
   BAD-OUT-OF-ORDER-2,
@@ -128,22 +138,72 @@ BAD-LIST ::= {
 main:
   nmea-parser := NmeaParser
   nmea-parser.add NmeaUbxParser.MESSAGES
+  test-message/NmeaMessage? := null
 
-  print nmea-parser.registry.keys
-
-  test-message2 := nmea-parser.from-string LONG-PUBX03
+  // Show which messages are in the registry for parsing:
+  //print nmea-parser.registry.keys
 
   GOOD-LIST.do: | line |
-    print " - Doing $line"
-
     // Test that item parses OK:
     expect-no-throw:
-      test-message := nmea-parser.from-string line
+      test-message = nmea-parser.from-string line
 
     // Test the test sentences convert to a message and then back to a sentence:
-    test-message := nmea-parser.from-string line
     expect-identical line test-message.to-string
 
-  BAD-LIST.do:
-    print " - Doing $it"
-    test-message := nmea-parser.from-string it
+  // Doing the bad messages:
+
+  // Bad checksum should throw:
+  expect-throw "INVALID NMEA MESSAGE: sentence checksum invalid" :
+    test-message = nmea-parser.from-string BAD-RMC
+
+  // Bad checksum should throw:
+  expect-throw "INVALID NMEA MESSAGE: sentence checksum invalid" :
+    test-message = nmea-parser.from-string BAD-CKS
+
+  // Throw 'bad checksum' if * is present but value is not parseable (eg "").
+  expect-throw "INVALID NMEA MESSAGE: sentence checksum invalid" :
+    test-message = nmea-parser.from-string BAD-TRUNC-2
+
+  // Throw for first char not being $:
+  expect-throw "INVALID NMEA MESSAGE: sentence first char not \$" :
+    test-message = nmea-parser.from-string BAD-GARBAGE-1
+
+  // Throw for first char not being $:
+  expect-throw "INVALID NMEA MESSAGE: sentence first char not \$" :
+    test-message = nmea-parser.from-string BAD-GARBAGE-2
+
+  expect-throw "INVALID NMEA MESSAGE: Unknown message type 'GPXYZ,1'" :
+    test-message = nmea-parser.from-string BAD-BODY
+
+  // If multipart message has no siblings, parser does not know and cannot throw:
+  expect-no-throw: nmea-parser.from-string BAD-NO-SIBLINGS
+
+  // If multipart message out of order, parser does not know and cannot throw:
+  expect-no-throw: nmea-parser.from-string BAD-OUT-OF-ORDER-1
+  expect-no-throw: nmea-parser.from-string BAD-OUT-OF-ORDER-2
+  expect-no-throw: nmea-parser.from-string BAD-OUT-OF-ORDER-3
+
+  // Validate BAD-SPLIT would be good if it wasn't for the split (eg CKS OK):
+  expect-no-throw: nmea-parser.from-string GOOD-SPLIT-1
+
+  // Sentence split across reads means an extra \r\n, means a failed checksum:
+  expect-throw "INVALID NMEA MESSAGE: sentence checksum invalid" :
+    test-message = nmea-parser.from-string BAD-SPLIT-1
+
+  // Validate BAD-SPLIT would be good if it wasn't for the split (eg CKS OK):
+  expect-no-throw: nmea-parser.from-string GOOD-SPLIT-2
+
+  // Sentence split across reads means an extra \r\n, means a failed checksum:
+  expect-throw "INVALID NMEA MESSAGE: sentence checksum invalid" :
+    test-message = nmea-parser.from-string BAD-SPLIT-2
+
+  // Establish good message before UBX bytes collide:
+  expect-no-throw: nmea-parser.from-string RMCMSG
+
+  // Colliding message: Throws because first char is not $.
+  expect-throw "INVALID NMEA MESSAGE: sentence first char not \$" :
+    test-message = nmea-parser.from-string UBX-COLLISION
+
+  // Truncated message parses but data onboard is bad.
+  test-message = nmea-parser.from-string BAD-TRUNC-1

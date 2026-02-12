@@ -162,7 +162,7 @@ class Ubx03 extends NmeaMessage:
     sats := List num-svs
     num-svs.repeat: | entry |
       ref := 3 + (entry * 6)
-      print "$entry $ref"
+      //print "$entry $ref"
       sats[entry] = payload_[ref]
     return sats
 
