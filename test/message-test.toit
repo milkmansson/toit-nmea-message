@@ -100,7 +100,7 @@ RMCMSG := "\$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68"
 UBX-COLLISION := "$UBX-BYTES$RMCMSG"
 
 // Partial UBX header, no message
-//\xb5
+PARTIAL := "\xb5"
 
 
 GOOD-LIST ::= {
@@ -148,7 +148,9 @@ main:
     expect-no-throw:
       test-message = nmea-parser.from-string line
 
-    // Test the test sentences convert to a message and then back to a sentence:
+    // Test the test sentences convert to a message and then back to a sentence.
+    // Includes truncating checksum (message stored as object) and re-computation
+    // as message goes back to string format:
     expect-identical line test-message.to-string
 
   // Doing the bad messages:
@@ -204,6 +206,9 @@ main:
   // Colliding message: Throws because first char is not $.
   expect-throw "INVALID NMEA MESSAGE: sentence first char not \$" :
     test-message = nmea-parser.from-string UBX-COLLISION
+
+  expect-throw "INVALID NMEA MESSAGE: sentence first char not \$" :
+    test-message = nmea-parser.from-string PARTIAL
 
   // Truncated message parses but data onboard is bad.
   test-message = nmea-parser.from-string BAD-TRUNC-1
