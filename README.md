@@ -36,23 +36,26 @@ version that the device needs to speak would be:
 - BeiDou: Only NMEA version 4.10 and later have support for Beidou.
 - Galileo: (Officially) Only since NMEA version 4.11.
 - QZSS: Only NMEA version 4.11 and later have support for QZSS.
+
 The updates to NMEA versions either add new fields to the end of existing
 sentences, or stop putting data into existing fields.  To illustrate, the main
 differences between NMEA 2.2 and 2.3/4.0 are:
 - The item of positioning mode (Mode) is no longer output in GLL, RMC and VTG sentences.
 - For the positioning quality (FS) item in the GGA statement, 1 is used for both dead reckoning and normal positioning
+
 Aside from the additional systems supported, the NMEA 4.1 protocol adds some
 fields based on 4.0:
 - Add a systemId item to the GSA statement.
 - Add a signalId item to the GSV statement.
 - Add a navStatus item to the RMC statement.
-Therefore this driver:
+
+For the reasons above this driver:
 - Stores the entire sentence per message, even if the driver doesn't naturally
 have a method for the required information.  Raw data can be accessed using
 `.raw` on all message types.  This is a view to the data payload, and the
 interesting field in the message can be accessed using `message.raw[xx]`
-- If there is no data in the field, output will be 'null' for numeric fields, or
-"" (empty string) for others.
+- If there is no data in a field, output will be `null` for numeric fields, or
+"" (empty string) for string fields.
 
 ## What is NMEA 2000?  Why not use this instead?
 For comparison, NMEA 2000 is a modern marine standard (also defined by the NMEA)
