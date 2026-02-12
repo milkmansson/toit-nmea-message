@@ -28,9 +28,10 @@ on 5 Jan 2024.
 > these types if/when use cases appear.
 
 ### NMEA Versions:
-What matters most is the version of NMEA that is output from the device.  To
-give an idea, if your device supports the following, the bare minimum NMEA
-version that the device needs to speak would be:
+What matters is the version of NMEA that is output from the device - many
+devices are not user upgradeable.  To give an idea, if your device supports the
+following, the bare minimum NMEA version that the device needs to speak will
+likely be:
 - GPS/SBAS: NMEA 2.3+
 - GLONASS: NMEA 2.3+
 - BeiDou: Only NMEA version 4.10 and later have support for Beidou.
