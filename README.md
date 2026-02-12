@@ -38,17 +38,18 @@ likely be:
 - Galileo: (Officially) Only since NMEA version 4.11.
 - QZSS: Only NMEA version 4.11 and later have support for QZSS.
 
-The updates to NMEA versions either add new fields to the end of existing
-sentences, or stop putting data into existing fields.  To illustrate, the main
-differences between NMEA 2.2 and 2.3/4.0 are:
-- The item of positioning mode (Mode) is no longer output in GLL, RMC and VTG sentences.
-- For the positioning quality (FS) item in the GGA sentence, 1 is used for both dead reckoning and normal positioning.
+Updates to NMEA versions typically either add new fields to the end of existing
+sentences, stop putting data into existing fields, or change the meaning of some
+outputs.  To illustrate, the main differences between NMEA 2.2 and 2.3/4.0 are:
+- The item of positioning mode (Mode) is no longer included in GLL, RMC and VTG
+sentences.
+- For the positioning quality (FS) field in the GGA sentence, 1 is used for both
+dead reckoning and normal positioning.
 
-Aside from the additional systems supported, the NMEA 4.1 protocol adds some
-fields based on 4.0:
-- Adding a `systemId` item to the GSA message.
-- Adding a `signalId` item to the GSV message.
-- Adding a `navStatus` item to the RMC message.
+Aside from the additional systems supported, NMEA 4.1 adds some fields based on 4.0:
+- Adding a `systemId` field to the GSA message.
+- Adding a `signalId` field to the GSV message.
+- Adding a `navStatus` field to the RMC message.
 
 For reasons associated with these points, this driver:
 - Stores the entire sentence per message, even if the driver doesn't naturally
