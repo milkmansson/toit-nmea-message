@@ -30,11 +30,11 @@ Text output for the readme:
 main:
   // Assemble parser.
   nmea-parser := NmeaParser
-  print "Base NmeaMessage count:  $nmea-parser.message-count"
+  print "Base NmeaMessage count:  $nmea-parser.registry.size"
 
   // Add Casic elements to NMEA parser/registry.
   nmea-parser.add NmeaCasicParser.MESSAGES
-  print "+Casic message count:    $nmea-parser.message-count"
+  print "+Casic message count:    $nmea-parser.registry.size"
 
   // Open serial communication and start driver.
   print "Opening on $BAUD..."

@@ -549,12 +549,11 @@ class Rmc extends NmeaMessage:
       --ms=ms
 
   stringify -> string:
-    output := ["$super: "]
-    output.add "status:$(STATUS-LOOKUP_[status])"
-    if status == "V": return output.join ""
-    if positioning-mode != null: output.add "|mode:$(POS-MODE-LOOKUP_[positioning-mode])"
+    output := ["$super: status:$(STATUS-LOOKUP_[status])"]
+    if status == "V": return output[0]
+    if positioning-mode != null: output.add "mode:$(POS-MODE-LOOKUP_[positioning-mode])"
     output.add "time:$time"
-    return output.join ""
+    return output.join "|"
 
 /**
 GLL: Geographic position (lat/lon + time + status).
