@@ -24,10 +24,10 @@ class Srf151 extends NmeaMessage:
   static ID ::= "SRF151"
 
   constructor:
-    super.private_ "P" ["P$ID"]
+    super.private_ "P" ID ["P$ID"]
 
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
 
 /**
@@ -37,7 +37,7 @@ class Srf154 extends NmeaMessage:
   static ID ::= "SRF154"
 
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_  "P" ID payload
 
 
 /**
@@ -52,10 +52,10 @@ class Srf105 extends NmeaMessage:
 
   constructor.set --on/bool=false:
     debug-value := on ? 1 : 0
-    super.private_ "P" ["P$ID", debug-value]
+    super.private_ "P" ID ["P$ID", debug-value]
 
   constructor.private_ payload/List:
-    super.private_  "P" payload
+    super.private_ "P" ID payload
 
   debug -> bool:
     return payload_[1] == 1

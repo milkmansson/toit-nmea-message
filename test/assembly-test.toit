@@ -12,21 +12,21 @@ main:
   print
 
   nmea-parser := NmeaParser
-  print "Base NmeaMessage count:  $nmea-parser.message-count"
+  print "Base NmeaMessage count:  $nmea-parser.registry.size"
 
-  nmea-parser.add NmeaCasicParser.messages
-  print "+Casic message count:    $nmea-parser.message-count"
+  nmea-parser.add NmeaCasicParser.MESSAGES
+  print "+Casic message count:    $nmea-parser.registry.size"
 
-  nmea-parser.add NmeaUbxParser.messages
-  print "+Ubx   message count:    $nmea-parser.message-count"
+  nmea-parser.add NmeaUbxParser.MESSAGES
+  print "+Ubx   message count:    $nmea-parser.registry.size"
 
-  nmea-parser.add NmeaSrfParser.messages
-  print "+PSrf  message count:    $nmea-parser.message-count"
+  nmea-parser.add NmeaSrfParser.MESSAGES
+  print "+PSrf  message count:    $nmea-parser.registry.size"
 
-  nmea-parser.add NmeaGarminParser.messages
-  print "+PGrm  message count:    $nmea-parser.message-count"
+  nmea-parser.add NmeaGarminParser.MESSAGES
+  print "+PGrm  message count:    $nmea-parser.registry.size"
 
   print
-  print "List of all message types ($nmea-parser.message-count): "
+  print "List of all message types ($nmea-parser.registry.size): "
   nmea-parser.registry.keys.do:
     print " - $it"
