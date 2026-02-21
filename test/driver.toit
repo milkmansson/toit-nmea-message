@@ -37,6 +37,9 @@ class Driver:
   // Map to contain the most recent message of every given type.
   latest-message/Map := {:}
 
+  // Collection of Lambdas for handling messages.
+  message-type-lambdas_/Map := {:}
+
   /**
   Creates a new driver object.
 
@@ -68,10 +71,16 @@ class Driver:
         start-latch.set true
         while true:
           message := adapter_.next-message
+
+          // Print the message - this driver is for debugging/testing.
           logger_.debug "RECV  ->" --tags={"message" : message}
 
           // Store latest version of messages for other handlers to use.
           latest-message[message.full-name] = message
+
+          // Check if there is a lambda for this message type and if so, do it.
+          if message-type-lambdas_.contains message.id:
+            message-type-lambdas_[message.id].call message
 
     start-latch.get
     logger_.debug "message receiver started" --tags={"ms": duration.in-ms}
@@ -109,6 +118,23 @@ class Driver:
     logger_.debug "SEND  <-" --tags={"message" : message}
     command-mutex_.do:
       adapter_.send-packet message.to-byte-array
+
+  /**
+  Register a Lambda against a message type.
+
+  If a lambda is registered for a message type, the lambda $function will be
+    called with the message each time the matching message type is recieved.
+  */
+  register-message-lambda message-id/string function/Lambda? -> none:
+    if not function:
+      if message-type-lambdas_.contains message-id:
+        message-type-lambdas_.remove message-id
+      return
+    message-type-lambdas_[message-id] = function
+
+
+
+
 
 
 

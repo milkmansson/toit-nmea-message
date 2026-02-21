@@ -211,6 +211,7 @@ class NmeaParser:
 
 abstract class NmeaMessage:
   static ID ::= "NONE"
+
   talker/string
   id_/string
   payload_/List
@@ -223,6 +224,9 @@ abstract class NmeaMessage:
 
   constructor.private_ .talker/string id/string .payload_/List:
     id_ = id.replace "," ""
+
+  id -> string:
+    return id_
 
   /** Whether this message is a poll. */
   is-poll -> bool:
@@ -305,8 +309,8 @@ class Txt extends NmeaMessage:
 /**
 GGA: GPS fix data.
 
-Includes time, lat/lon, fix quality, number of sats used, HDOP, altitude, geoid
-  separation, etc.
+Includes lat/lon, fix quality, number of sats used, HDOP, altitude, geoid
+  separation, timestamp (utc string timestamp), etc.
 */
 class Gga extends NmeaMessage:
   static ID ::= "GGA"
@@ -329,7 +333,7 @@ class Gga extends NmeaMessage:
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
 
-  utc-string -> string:
+  timestamp -> string:
     return payload_[1]
 
   /**
@@ -384,6 +388,8 @@ ZDA: Date & time + local zone offset. (Some data also visible from RMC.)
 */
 class Zda extends NmeaMessage:
   static ID ::= "ZDA"
+  received-time/Time? := null
+  is-valid_ := false
 
   /** Creates a standard poll for ZDA from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
@@ -391,16 +397,33 @@ class Zda extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    received-time = Time.now
+    validate_
+
+  validate_ -> none:
+    payload_[1..].do: | cell |
+      if cell == "":
+        is-valid_ = false
+        return
+    is-valid_ = true
+
+  is-valid -> bool:
+    return is-valid_
 
   lz-hours -> int:
     return int.parse payload_[5]
 
   lz-minutes -> int:
-    //print "parsing '$payload_[6]'"
     return int.parse payload_[6]
 
+  system-time-offset -> Duration?:
+    if is-valid: return time.to received-time
+    return null
+
   /** Time provided by GNSS. */
-  time -> Time:
+  time -> Time?:
+    if not is-valid:
+      return null
     return Time.utc
       --year=(int.parse payload_[4])
       --month=(int.parse payload_[3])
@@ -411,6 +434,10 @@ class Zda extends NmeaMessage:
       --ms=(int.parse (payload_[1])[7..])
 
   stringify -> string:
+    if is-poll:
+      return "$super: poll"
+    if not is-valid:
+      return "$super: time invalid"
     return  "$super: $time+$(%02b lz-hours):$(%02b lz-minutes)"
 
 /**
@@ -469,7 +496,7 @@ class Vtg extends NmeaMessage:
     return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]|kmh:$(%0.0f speed-kmh)|kts:$(%0.0f speed-kts)|course:$(%0.3f true-course)"
 
 /**
-RMC: Time, date, lat/lon, speed over ground, course over ground, status.
+RMC: Time, date, time (UTC string timestamp), lat/lon, speed over ground, course over ground, status.
 */
 class Rmc extends NmeaMessage:
   static ID ::= "RMC"
