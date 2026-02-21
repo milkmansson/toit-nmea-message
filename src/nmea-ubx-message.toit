@@ -371,3 +371,57 @@ class Ubx40 extends NmeaMessage:
     FIELD-LOOKUP_.keys.do:
       if payload_[it] == 1: list += FIELD-LOOKUP_[it]
     return  "$super: msgid:$type|$(list.join ",")"
+
+/**
+PUBX41: Set protocols and baud rates.
+*/
+class Ubx41 extends NmeaMessage:
+  static ID ::= "UBX,41"
+
+  static PORT-DDC ::= 0 // I2C
+  static PORT-I2C ::= PORT-DDC
+  static PORT-UART1 ::= 1
+  static PORT-UART2 ::= 2
+  static PORT-USB ::= 3
+  static PORT-SPI ::= 4
+  static PORT-LOOKUP_ ::= {
+    PORT-DDC: "DDC",
+    PORT-UART1: "UART1",
+    PORT-UART2: "UART2",
+    PORT-USB: "USB",
+    PORT-SPI: "SPI"
+  }
+
+  static PROTO-RTCM ::= 0b0100
+  static PROTO-NMEA ::= 0b0010
+  static PROTO-UBX  ::= 0b0001
+  static LOOKUP-PROTO_  ::= {
+    PROTO-RTCM: "RTCM",
+    PROTO-NMEA: "NMEA",
+    PROTO-UBX: "UBX",
+  }
+
+  constructor.set port-id/int
+      --in-proto=null
+      --out-proto=null
+      --baud-rate/int?=null
+      --auto-baud/bool=false:   // Autobaud not supported on ublox 5.
+    assert: PORT-LOOKUP_.contains port-id
+    fields := List 7
+    fields[0] = "PUBX"
+    fields[1] = "41"
+    fields[2] = port-id
+    fields[3] = in-proto != null ? "$(%04x in-proto)" : ""
+    fields[4] = out-proto != null ? "$(%04x out-proto)" : ""
+    fields[5] = baud-rate != null ? baud-rate : ""
+    fields[6] = auto-baud ? 1 : 0
+    super.private_ "P" ID fields
+
+  stringify -> string:
+    list := []
+    if payload_[2] != "": list.add "port-id:$(payload_[2])"
+    if payload_[3] != "": list.add "in-proto:$(payload_[3])"
+    if payload_[4] != "": list.add "out-proto:$(payload_[4])"
+    if payload_[5] != "": list.add "baud-rate:$(payload_[5])"
+    if payload_[6] != "": list.add "auto-baud:$(payload_[6] == 1 ? true : false)"
+    return  "$super: $(list.join "|")"

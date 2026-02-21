@@ -388,6 +388,10 @@ ZDA: Date & time + local zone offset. (Some data also visible from RMC.)
 */
 class Zda extends NmeaMessage:
   static ID ::= "ZDA"
+
+  static half := Duration --ms=500
+  static one  := Duration --s=1
+
   received-time/Time? := null
   is-valid_ := false
 
@@ -396,16 +400,19 @@ class Zda extends NmeaMessage:
     super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
-    super.private_ talker ID payload
     received-time = Time.now
+    super.private_ talker ID payload
     validate_
 
+  /**
+  Whether any cell of the message is empty (making the whole message incomplete).
+  */
   validate_ -> none:
+    is-valid_ = true
     payload_[1..].do: | cell |
       if cell == "":
         is-valid_ = false
         return
-    is-valid_ = true
 
   is-valid -> bool:
     return is-valid_
@@ -417,21 +424,50 @@ class Zda extends NmeaMessage:
     return int.parse payload_[6]
 
   system-time-offset -> Duration?:
-    if is-valid: return time.to received-time
-    return null
+    if not is-valid: return null
+    if not received-time: return null
+    gps-time := time
+    if not gps-time: return null
+
+    // Raw offset: GPS time - receive timestamp.
+    offset := received-time.to gps-time
+
+    // Wrap offset to the nearest representation within +/- 0.5 seconds.
+    if offset < -half:
+      offset += one
+    else if offset > half:
+      offset -= one
+
+    return offset
 
   /** Time provided by GNSS. */
   time -> Time?:
-    if not is-valid:
-      return null
+    if not is-valid: return null
+
+    t := payload_[1]  // Will be: "hhmmss", or "hhmmss.ss", or "hhmmss.sss"
+    h := int.parse t[0..2]
+    m := int.parse t[2..4]
+    s := int.parse t[4..6]
+
+    ms := 0
+    dot-pos := t.index-of "."
+    if dot-pos != -1:
+      frac := t[dot-pos + 1..]
+      // keep digits only, up to 3
+      if frac.size > 3: frac = frac[0..3]
+      // scale to milliseconds
+      if frac.size == 1: ms = (int.parse frac) * 100
+      else if frac.size == 2: ms = (int.parse frac) * 10
+      else if frac.size == 3: ms = (int.parse frac)
+
     return Time.utc
       --year=(int.parse payload_[4])
       --month=(int.parse payload_[3])
       --day=(int.parse payload_[2])
-      --h=(int.parse (payload_[1])[0..2])
-      --m=(int.parse (payload_[1])[2..4])
-      --s=(int.parse (payload_[1])[4..6])
-      --ms=(int.parse (payload_[1])[7..])
+      --h=h
+      --m=m
+      --s=s
+      --ms=ms
 
   stringify -> string:
     if is-poll:
