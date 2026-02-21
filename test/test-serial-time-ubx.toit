@@ -41,15 +41,7 @@ main:
   set-baud := Ubx41.set Ubx41.PORT-UART1 --baud-rate=115200 --auto-baud=false
   driver.send-message set-baud
   sleep --ms=250
-  driver.close
-  port.close
-
-  // Reconnect on higher baud.
-  print "Opening on 115200..."
-  port = uart.Port --tx=TX-PIN --rx=RX-PIN --baud-rate=BAUD
-  print "Starting driver on 115200..."
-  driver = Driver port.in port.out nmea-parser
-  print "Driver started on 115200..."
+  port.baud-rate = 115200
 
   // Stop all messages and just have ZDA
   print "Stopping message noise... (1xZDA/1sec)"
@@ -67,7 +59,6 @@ main:
   driver.send-message disable-gga
   set-zda := Ubx40.set "ZDA" --uart1-rate=1
   driver.send-message set-zda
-
 
   print "Sending Poll for \$PUBX,00: Navigation Information..."
   nav-info := Ubx00.poll

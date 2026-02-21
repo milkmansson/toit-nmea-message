@@ -402,8 +402,8 @@ class Ubx41 extends NmeaMessage:
   }
 
   constructor.set port-id/int
-      --in-proto=null
-      --out-proto=null
+      --in-proto/int?=null
+      --out-proto/int?=null
       --baud-rate/int?=null
       --auto-baud/bool=false:   // Autobaud not supported on ublox 5.
     assert: PORT-LOOKUP_.contains port-id

@@ -83,7 +83,7 @@ class Driver:
             message-type-lambdas_[message.id].call message
 
     start-latch.get
-    logger_.debug "message receiver started" --tags={"ms": duration.in-ms}
+    logger_.debug "message receiver started" --tags={"duration": duration}
 
   /**
   Resets the driver.
