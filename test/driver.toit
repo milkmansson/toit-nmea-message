@@ -72,15 +72,19 @@ class Driver:
         while true:
           message := adapter_.next-message
 
-          // Print the message - this driver is for debugging/testing.
-          logger_.debug "RECV  ->" --tags={"message" : message}
-
-          // Store latest version of messages for other handlers to use.
-          latest-message[message.full-name] = message
 
           // Check if there is a lambda for this message type and if so, do it.
           if message-type-lambdas_.contains message.id:
             message-type-lambdas_[message.id].call message
+          else:
+            // Print the message only if no lambda.
+            // This driver is for debugging/testing, but can be a bit noisy if
+            // testing a lambda for a message type.
+            logger_.debug "RECV  ->" --tags={"message" : message}
+
+
+          // Store latest version of messages for other handlers to use.
+          latest-message[message.full-name] = message
 
     start-latch.get
     logger_.debug "message receiver started" --tags={"duration": duration}
