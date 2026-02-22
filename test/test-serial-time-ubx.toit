@@ -79,7 +79,6 @@ main:
   driver.register-message-lambda "ZDA" :: | message | do-it message
 
 
-
 do-it message -> none:
   offset := Duration.ZERO
   correction := Duration.ZERO
@@ -88,8 +87,8 @@ do-it message -> none:
     offset = message.system-time-offset
     ema.add message.system-time-offset.in-us
   if ema.average:
-    print "- $(Time.now)  - $(Duration --us=ema.average.to-int)"
-    print "- $message.raw"
+    print "  $(Duration --us=ema.average.to-int)"
+    //print "- $message.raw"
 
   if ema.samples % 15 == 0:
     correction = Duration --us=ema.average.to-int

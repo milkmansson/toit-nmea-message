@@ -63,13 +63,8 @@ main:
   baud-rate := Cas01.set 115200
   driver.send-message baud-rate
   sleep --ms=250
-  driver.close
-  port.close
-  port = uart.Port --tx=TX-PIN --rx=RX-PIN --baud-rate=115200
-  print "Starting driver at 115200..."
-  driver = Driver port.in port.out nmea-parser
-  print "Driver started again..."
-  sleep --ms=500
+  port.baud-rate = 115200
+  sleep --ms=250
 
   print "Set up EMA"
   ema = Ema ema-alpha
