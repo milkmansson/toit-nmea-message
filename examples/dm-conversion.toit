@@ -4,6 +4,17 @@
 
 import nmea-message show *
 
+/**
+Example of converting GNSS native forms of Lat/Long to methematical form.
+
+Most GNSS devices will natively use degrees-minutes N/S|E/W.  However, maps
+  math libraries typically want a single floating point number.  The number
+  will be -90 <= x <= 90, with with North = +ve, South = -ve and East = +ve,
+  West = -ve.
+
+Exmaple shows conversion of a static GGA message.
+*/
+
 main:
   nmea-parser := NmeaParser
 
