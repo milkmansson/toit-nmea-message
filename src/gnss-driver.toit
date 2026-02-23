@@ -46,7 +46,11 @@ class Gnss-driver:
   Create an $io.Reader from a $serial.Device, and provide as $reader.  Similarly,
     create an $io.Writer from a $serial.Device, and provide as $writer.
   */
-  constructor reader/io.Reader writer/io.Writer parser/nmea-message.NmeaParser logger/log.Logger=log.default:
+  constructor
+      reader/io.Reader
+      writer/io.Writer
+      parser/NmeaParser
+      logger/log.Logger=log.default:
     logger_ = logger.with-name "nmea-driver"
     adapter_ = Adapter_ reader writer parser logger_
 
@@ -137,11 +141,6 @@ class Gnss-driver:
     message-type-lambdas_[message-id] = function
 
 
-
-
-
-
-
 class Adapter_:
   static STREAM-DELAY_ ::= Duration --ms=1
 
@@ -154,7 +153,7 @@ class Adapter_:
   logger_/log.Logger
   reader_/io.Reader
   writer_/io.Writer
-  parser_/nmea-message.NmeaParser
+  parser_/NmeaParser
 
   constructor .reader_ .writer_ .parser_ logger/log.Logger=log.default:
     logger_ = logger.with-name "adapter"
