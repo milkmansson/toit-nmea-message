@@ -1,6 +1,9 @@
 import uart
 
-DEVICE := "COM19"
+/** Echo serial input to serial monitor. */
+
+DEVICE := "COM19" // Windows
+//DEVICE := "/dev/ttyACM0" // Linux (example)
 BAUD   := 9600
 
 main:
