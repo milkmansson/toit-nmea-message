@@ -7,9 +7,15 @@ import i2c
 import uart
 import io
 
-import .driver show *
 import nmea-message show *
+import nmea-message.gnss-driver show *
 import nmea-message.nmea-casic-message show *
+
+
+/**
+Print driver start message, and let the driver's own tasks run and
+  simply display incoming messages.
+*/
 
 TX-PIN := gpio.Pin 7
 RX-PIN := gpio.Pin 6
@@ -20,13 +26,10 @@ BAUD   := 9600
 main:
   // Assemble parser.
   nmea-parser := NmeaParser
-  print "Base NmeaMessage count:  $nmea-parser.message-count"
+  print "Base NmeaMessage count:  $nmea-parser.registry.size"
 
   // Open serial communication and start driver.
   print "Opening on $BAUD"
   port := uart.Port --tx=TX-PIN --rx=RX-PIN --baud-rate=BAUD
-  driver := Driver port.in port.out nmea-parser
-
-  // Print driver start message, and let the driver's own tasks run and
-  // simply display incoming messages.
+  driver := Gnss-driver port.in port.out nmea-parser
   print "Driver started..."

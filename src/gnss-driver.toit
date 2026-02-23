@@ -8,7 +8,7 @@ import log
 import monitor
 import serial
 
-import nmea-message
+import .nmea-message
 
 /**
 Generic driver for GNSS devices.
@@ -18,7 +18,7 @@ Driver simply sets up an adapter and puts all messages through the NMEA message
   https://github.com/toitware/ublox-gnss-driver tailored to this task.
 */
 
-class Driver:
+class Gnss-driver:
 
   static COMMAND-TIMEOUT_ ::= Duration --s=5
 
