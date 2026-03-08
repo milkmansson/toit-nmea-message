@@ -1,3 +1,6 @@
 dependencies:
+  ema:
+    url: github.com/milkmansson/toit-ema
+    version: ^1.2.0
   nmea-message:
     path: ../

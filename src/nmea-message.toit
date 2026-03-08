@@ -111,9 +111,11 @@ class NmeaParser:
 
     // Ensure a comma exists and a meaningful header.
     first-comma/int := sentence.index-of DELIMITER_
+    if first-comma < 4 or first-comma == -1:
+      throw "$INVALID-NMEA-MESSAGE_: malformed header/body "
     second-comma/int := sentence.index-of DELIMITER_ (first-comma + 1)
-    if first-comma < 4 or first-comma == -1 or second-comma == -1:
-      throw "$INVALID-NMEA-MESSAGE_: malformed header/body"
+    if second-comma == -1:
+      throw "$INVALID-NMEA-MESSAGE_: malformed header/body (second comma)"
 
     type/string := sentence[1..first-comma].to-ascii-upper
     id/string := ?
@@ -215,6 +217,7 @@ abstract class NmeaMessage:
   talker/string
   id_/string
   payload_/List
+  is-valid_/bool := false
 
   //** Creates a standard poll for MSS from the specified talker id. */
   // May remove because not all derivative message types allow polling.
@@ -225,12 +228,41 @@ abstract class NmeaMessage:
   constructor.private_ .talker/string id/string .payload_/List:
     id_ = id.replace "," ""
 
+  /**
+  Whether any cell of the message is empty (making the whole message incomplete).
+  */
+  validate_ fields/List?=null -> none:
+    is-valid_ = true
+    if not fields:
+      if (payload_.any: it == ""):
+        is-valid_ = false
+    else:
+      fields.do: | cell |
+        if payload_[cell] == "":
+          is-valid_ = false
+          return
+
   id -> string:
     return id_
 
   /** Whether this message is a poll. */
   is-poll -> bool:
     return payload_.size <= 2
+
+  /**
+  Whether this message is valid.
+
+  Some messages will have empty fields when there is no fix.  In those cases,
+    Data returned will be `null` as 0 is often a valid value.  For each child
+    message definition, this function needs to be adjusted to suit its message
+    content.  Some messages return fix information, some must be examined to
+    see if fields are blank.
+
+  In many circumstances this function can be tested instead of individually
+    checking if each field is null.
+  */
+  is-valid -> bool:
+    return is-valid_
 
   /** Whether this message is multipart. */
   is-multipart -> bool:
@@ -288,6 +320,7 @@ class Txt extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    is-valid_ = true
 
   is-multipart -> bool:
     return (int.parse payload_[1]) >= 2
@@ -332,6 +365,7 @@ class Gga extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    is-valid_ = is-fix-valid
 
   timestamp -> string:
     return payload_[1]
@@ -339,8 +373,8 @@ class Gga extends NmeaMessage:
   /**
   Latitude, in DDMM.MMMMM format. ($latitude-n for N/S.)
   */
-  latitude -> float:
-    return float.parse payload_[2]
+  latitude -> float?:
+    return float.parse payload_[2] --if-error=: null
 
   latitude-n -> string:
     return payload_[3]
@@ -348,32 +382,32 @@ class Gga extends NmeaMessage:
   /**
   Longitude, in DDDMM.MMMMM format. ($longitude-e for E/W.)
   */
-  longitude -> float:
-    return float.parse payload_[4]
+  longitude -> float?:
+    return float.parse payload_[4] --if-error=: null
 
   longitude-e -> string:
     return payload_[5]
 
-  fix-quality -> int:
-    return int.parse payload_[6]
+  fix-quality -> int?:
+    return int.parse payload_[6] --if-error=: null
 
   is-fix-valid -> bool:
     return fix-quality > QUALITY-NO-FIX
 
   /** Number of satellites in the message. */
-  satellite-count -> int:
-    return int.parse payload_[7]
+  satellite-count -> int?:
+    return int.parse payload_[7] --if-error=: null
 
   /** Altitude */
-  altitude -> float:
-    return float.parse payload_[9]
+  altitude -> float?:
+    return float.parse payload_[9] --if-error=: null
 
   altitude-unit -> string:
     return payload_[10]
 
   /** Geoidal Height */
-  geoidal-height -> float:
-    return float.parse payload_[11]
+  geoidal-height -> float?:
+    return float.parse payload_[11] --if-error=: null
 
   geoidal-height-unit -> string:
     return payload_[12]
@@ -403,19 +437,6 @@ class Zda extends NmeaMessage:
     received-time = Time.now
     super.private_ talker ID payload
     validate_
-
-  /**
-  Whether any cell of the message is empty (making the whole message incomplete).
-  */
-  validate_ -> none:
-    is-valid_ = true
-    payload_[1..].do: | cell |
-      if cell == "":
-        is-valid_ = false
-        return
-
-  is-valid -> bool:
-    return is-valid_
 
   lz-hours -> int:
     return int.parse payload_[5]
@@ -503,20 +524,19 @@ class Vtg extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_ [1, 5, 7]
 
   true-course -> float?:
-    return float.parse payload_[1] --if-error=: 0.0
+    return float.parse payload_[1] --if-error=: null
 
-  magnetic-course -> float:
-    return float.parse payload_[3] --if-error=: 0.0
+  magnetic-course -> float?:
+    return float.parse payload_[3] --if-error=: null
 
-  speed-kmh -> float:
-    //print "KMH PARSING $payload"
-    return float.parse payload_[7] --if-error=: 0.0
+  speed-kts -> float?:
+    return float.parse payload_[5] --if-error=: null
 
-  speed-kts -> float:
-    //print "KMH PARSING $payload_[7]"
-    return float.parse payload_[5] --if-error=: 0.0
+  speed-kmh -> float?:
+    return float.parse payload_[7] --if-error=: null
 
   /** Value in NMEA v2.3 or later. */
   positioning-mode -> string?:
@@ -565,6 +585,7 @@ class Rmc extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   /**
   Returns UTC timestamp of the message.
@@ -681,6 +702,7 @@ class Gll extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   latitude -> float:
     return float.parse payload_[1]
@@ -771,6 +793,7 @@ class Gsa extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   operation-mode -> string:
     return payload_[1]
@@ -841,6 +864,7 @@ class Gsv extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   is-multipart -> bool:
     return true
@@ -918,6 +942,7 @@ class Gns extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   /**
   Returns UTC timestamp of the message.
@@ -975,7 +1000,7 @@ class Gns extends NmeaMessage:
     return int.parse payload_[11] --if-error=: null
 
   /** ID of station providing differential corrections (null if DGPS not used). */
-  differential-station  -> int:
+  differential-station  -> int?:
     return int.parse payload_[12] --if-error=: null
 
   stringify -> string:
@@ -1010,6 +1035,7 @@ class Gbs extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   /**
   Returns UTC timestamp of the message.
@@ -1099,6 +1125,7 @@ class Mss extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   signal-strength -> float?:
     return float.parse payload_[1] --if-error=: null
@@ -1137,6 +1164,7 @@ class Gst extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   /**
   Returns UTC timestamp of the message.
@@ -1210,6 +1238,7 @@ class Vlw extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   twd -> float?:
     return float.parse payload_[1] --if-error=: null
@@ -1255,6 +1284,7 @@ class Rlm extends NmeaMessage:
 
   constructor.private_ talker/string payload/List:
     super.private_ talker ID payload
+    validate_
 
   /** Beacon ID, identifies beacon intended to receive this message. */
   beacon -> int?:

@@ -11,7 +11,6 @@ import nmea-message show *
 import nmea-message.gnss-driver show *
 import nmea-message.nmea-casic-message show *
 
-
 /**
 Print driver start message, and let the driver's own tasks run and
   simply display incoming messages.

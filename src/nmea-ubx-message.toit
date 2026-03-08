@@ -123,8 +123,8 @@ class Ubx00 extends NmeaMessage:
     if is-poll:
       return "$super: poll"
     list := []
-    list.add "lat:$latitude($latitude-n)"
-    list.add "lon:$longitude($longitude-e)"
+    list.add "lat:$(%0.4f latitude)..($latitude-n)"
+    list.add "lon:$(%0.4f longitude)..($longitude-e)"
     list.add "accuracy:$(%0.3f h-accuracy)/$(%0.3f v-accuracy)"
     return  "$super: $(list.join "|")"
 

@@ -5,8 +5,8 @@
 import gpio
 import uart
 
-import .driver show *
 import nmea-message show *
+import nmea-message.gnss-driver show *
 import nmea-message.nmea-ubx-message show *
 
 import ema show *
@@ -27,18 +27,17 @@ main:
   nmea-parser.add NmeaUbxParser.MESSAGES
   print "+Ubx message count:    $nmea-parser.registry.size"
 
-  // Open serial communication and start driver.
+  // Open serial communication and start driver.  Change to 115200.
+  print
   print "Opening on $BAUD..."
   port := uart.Port --tx=TX-PIN --rx=RX-PIN --baud-rate=BAUD
   print "Starting driver..."
-  driver := Driver port.in port.out nmea-parser
-  print "Driver started..."
-
-  // Send serial change and reconnect.
+  driver := Gnss-driver port.in port.out nmea-parser
   set-baud := Ubx41.set Ubx41.PORT-UART1 --baud-rate=115200 --auto-baud=false
   driver.send-message set-baud
   sleep --ms=250
   port.baud-rate = 115200
+  print "Driver started at 115200..."
 
   // Stop all messages and just have ZDA
   print "Stopping message noise... (1xZDA/1sec)"
@@ -57,20 +56,11 @@ main:
   set-vtg := Ubx40.set "VTG" --uart1-rate=1
   driver.send-message set-vtg
 
-  print "Sending Poll for \$PUBX,00: Navigation Information..."
-  nav-info := Ubx00.poll
-  driver.send-message nav-info
-
-  print "Sending Poll for \$PUBX,03: Satellite Information..."
-  satellite-info := Ubx03.poll
-  driver.send-message satellite-info
-
-  print "Sending Poll for \$PUBX,04: Time and Date..."
-  time-date := Ubx04.poll
-  driver.send-message time-date
-
   print "Register lambda for VTG Message type"
   driver.register-message-lambda "VTG" :: | message | do-it message
 
 do-it message -> none:
-  print "$(%0.2f message.speed-kmh) km/h"
+  if message.is-valid:
+    print "$(%0.2f message.speed-kmh) km/h"
+  else:
+    print "message invalid"
