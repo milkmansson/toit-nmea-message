@@ -297,6 +297,18 @@ abstract class NmeaMessage:
     checksum-string := "$(%02x checksum)".to-ascii-upper
     return "\$$outstring*$checksum-string"
 
+  /**
+  Expected reply message IDs for a poll message.
+
+  When a message is a poll message, these IDs are the expected possible
+    replies.  They can equally be a message type, and/or ACK/NAK message types.
+    The driver will likely accept the first message of this type as a reply.
+    The set will be null if there are no messages.
+  */
+  poll-reply-ids -> List?:
+    if not is-poll: return null
+    return []
+
 /**
 TXT: Text/status messages (firmware info, warnings, antenna status, etc).
 

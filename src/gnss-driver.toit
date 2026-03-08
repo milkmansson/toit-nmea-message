@@ -19,11 +19,13 @@ Driver simply sets up an adapter and puts all messages through the NMEA message
 */
 
 class Gnss-driver:
-
-  static COMMAND-TIMEOUT_ ::= Duration --s=5
+  static POLL-TIMEOUT_ ::= Duration --s=5
 
   // Latches/Mutexes for managing and acknowledging commands
-  command-mutex_ := monitor.Mutex  // Used to ensure one command at once.
+  message-mutex_ := monitor.Mutex  // Used to ensure one command at once.
+
+  // Stores the latch if polling and waiting for an expected response.
+  poll-latch_ := monitor.Latch
 
   // Loggers - one for driver, and separate one for UBX device sourced messages.
   logger_/log.Logger := ?
@@ -39,6 +41,7 @@ class Gnss-driver:
 
   // Collection of Lambdas for handling messages.
   message-type-lambdas_/Map := {:}
+
 
   /**
   Creates a new driver object.
@@ -112,20 +115,59 @@ class Gnss-driver:
   /** Send a raw byte array to the device, for debug purposes. */
   send-byte-array bytes/ByteArray -> none:
     logger_.debug "SEND  <-" --tags={"bytes" : bytes}
-    command-mutex_.do:
+    message-mutex_.do:
       adapter_.send-packet bytes
 
   /** Send a user created message to the device, for debug purposes. */
-  send-message message/any -> none:
+  send-message message/NmeaMessage -> none:
     logger_.debug "SEND  <-" --tags={"message" : message.to-string}
-    command-mutex_.do:
+    message-mutex_.do:
       adapter_.send-message message.to-string
 
-  /** Send a user created message to the device, for debug purposes. */
+  /** Send a user created string to the device, for debug purposes. */
   send-sentence message/string -> none:
     logger_.debug "SEND  <-" --tags={"message" : message}
-    command-mutex_.do:
+    message-mutex_.do:
       adapter_.send-packet message.to-byte-array
+
+  /** Send a poll message.
+
+  Handles logic of success and failure messages, waits for the required message
+    while not blocking other message traffic being handled by the driver.  Note
+    that new/custom message types being sent may require latch handling to avoid
+    always being handled via the $POLL-TIMEOUT_ timeout path, and to catch the
+    relevant message that matches the command.
+  */
+  send-poll-message message/NmeaMessage -> NmeaMessage:
+    response := message
+
+    message-mutex_.do:
+      // Reset the latch to prevent stray ACK/NAK getting used.
+      poll-latch_ = monitor.Latch
+
+      // todo: try/finally.
+      // todo: determine if/how we should convert to semphore.
+      duration := Duration.ZERO
+      logger_.debug "SEND  <-" --tags={"message" : message}
+      exception := catch:
+        with-timeout POLL-TIMEOUT_:
+          duration = Duration.of:
+            adapter_.send-message message.to-string
+            response = poll-latch_.get
+
+      // Set latch to null if we're not using it.
+      poll-latch_ = null
+
+      // Sleep a moment
+      sleep --ms=50
+
+      if exception:
+        logger_.error "Command timed out. " --tags={"message":"$(message)", "ms":duration.in-ms}
+        return null
+
+    // Lets have the return message supplied back to the caller to determine
+    // what to do with it.
+    return response
 
   /**
   Register a Lambda against a message type.
