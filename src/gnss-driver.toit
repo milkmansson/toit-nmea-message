@@ -15,7 +15,7 @@ Generic driver for GNSS devices.
 
 Driver simply sets up an adapter and puts all messages through the NMEA message
   parser, displaying the results.  This driver is a cut down version of the
-  https://github.com/toitware/ublox-gnss-driver tailored to this task.
+  https://github.com/toitware/ublox-gnss-driver tailored to this one task.
 */
 
 class Gnss-driver:
@@ -26,6 +26,10 @@ class Gnss-driver:
 
   // Stores the latch if polling and waiting for an expected response.
   poll-latch_ := monitor.Latch
+
+  // List of message IDs interesting to a given poll message. Mutex ensures
+  // only poll message is processed at once.
+  pending-polls_/List := []
 
   // Loggers - one for driver, and separate one for UBX device sourced messages.
   logger_/log.Logger := ?
@@ -138,15 +142,13 @@ class Gnss-driver:
     always being handled via the $POLL-TIMEOUT_ timeout path, and to catch the
     relevant message that matches the command.
   */
-  send-poll-message message/NmeaMessage -> NmeaMessage:
+  send-poll-message message/NmeaMessage -> NmeaMessage?:
     response := message
 
     message-mutex_.do:
       // Reset the latch to prevent stray ACK/NAK getting used.
       poll-latch_ = monitor.Latch
 
-      // todo: try/finally.
-      // todo: determine if/how we should convert to semphore.
       duration := Duration.ZERO
       logger_.debug "SEND  <-" --tags={"message" : message}
       exception := catch:
@@ -162,7 +164,7 @@ class Gnss-driver:
       sleep --ms=50
 
       if exception:
-        logger_.error "Command timed out. " --tags={"message":"$(message)", "ms":duration.in-ms}
+        logger_.error "Command timed out. " --tags={"message":"$(message)", "duration":duration}
         return null
 
     // Lets have the return message supplied back to the caller to determine
