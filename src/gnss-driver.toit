@@ -29,7 +29,7 @@ class Gnss-driver:
 
   // List of message IDs interesting to a given poll message. Mutex ensures
   // only poll message is processed at once.
-  pending-polls_/List := []
+  pending-polls_/List? := null
 
   // Loggers - one for driver, and separate one for UBX device sourced messages.
   logger_/log.Logger := ?
@@ -83,6 +83,10 @@ class Gnss-driver:
         while true:
           message := adapter_.next-message
 
+          // Resolve any pending poll waiting for this message type.
+          if pending-polls_.contains message.id:
+            pending-polls_.remove message.id
+            poll-latch_.set message
 
           // Check if there is a lambda for this message type and if so, do it.
           if message-type-lambdas_.contains message.id:
@@ -91,8 +95,7 @@ class Gnss-driver:
             // Print the message only if no lambda.
             // This driver is for debugging/testing, but can be a bit noisy if
             // testing a lambda for a message type.
-            logger_.debug "RECV  ->" --tags={"message" : message}
-
+            logger_.debug "RECV  ->" --tags={"message": message}
 
           // Store latest version of messages for other handlers to use.
           latest-message[message.full-name] = message
@@ -118,19 +121,19 @@ class Gnss-driver:
 
   /** Send a raw byte array to the device, for debug purposes. */
   send-byte-array bytes/ByteArray -> none:
-    logger_.debug "SEND  <-" --tags={"bytes" : bytes}
+    logger_.debug "SEND  <-" --tags={"bytes": bytes}
     message-mutex_.do:
       adapter_.send-packet bytes
 
   /** Send a user created message to the device, for debug purposes. */
   send-message message/NmeaMessage -> none:
-    logger_.debug "SEND  <-" --tags={"message" : message.to-string}
+    logger_.debug "SEND  <-" --tags={"message": message.to-string}
     message-mutex_.do:
       adapter_.send-message message.to-string
 
   /** Send a user created string to the device, for debug purposes. */
   send-sentence message/string -> none:
-    logger_.debug "SEND  <-" --tags={"message" : message}
+    logger_.debug "SEND  <-" --tags={"message": message}
     message-mutex_.do:
       adapter_.send-packet message.to-byte-array
 
@@ -141,34 +144,53 @@ class Gnss-driver:
     that new/custom message types being sent may require latch handling to avoid
     always being handled via the $POLL-TIMEOUT_ timeout path, and to catch the
     relevant message that matches the command.
+
+  A poll for a message has it returned before supplying to any registered
+    lambdas for that type.  To poll for a message and just have the respective
+    lambda handle it - use $send-message instead.
   */
   send-poll-message message/NmeaMessage -> NmeaMessage?:
     response := message
+
+    if message.is-multipart:
+      throw "Function doesn't yet handle multipart for poll messages."
 
     message-mutex_.do:
       // Reset the latch to prevent stray ACK/NAK getting used.
       poll-latch_ = monitor.Latch
 
+      // Catch if poll has no defined return types.
+      if not message.poll-reply-ids:
+        logger_.error "poll without poll-reply-ids" --tags={
+          "message":"$(message)",
+          "poll-reply-ids":message.poll-reply-ids,
+          }
+
+      // Set expected return types for the message runner.
+      pending-polls_ = message.poll-reply-ids
+
+      // Send and wait for the latch.
       duration := Duration.ZERO
-      logger_.debug "SEND  <-" --tags={"message" : message}
+      logger_.debug "SEND  <-" --tags={"message": message}
       exception := catch:
         with-timeout POLL-TIMEOUT_:
           duration = Duration.of:
             adapter_.send-message message.to-string
             response = poll-latch_.get
 
-      // Set latch to null if we're not using it.
+      // Wipe latch & poll waiting list now we're not using it.
       poll-latch_ = null
+      pending-polls_ = null
 
-      // Sleep a moment
+      // Sleep a moment.
       sleep --ms=50
 
+      // Bail on an exception.
       if exception:
-        logger_.error "Command timed out. " --tags={"message":"$(message)", "duration":duration}
+        logger_.error "Command timed out. " --tags={"message": message, "duration": duration}
         return null
 
-    // Lets have the return message supplied back to the caller to determine
-    // what to do with it.
+    // Supply poll return message to the caller.
     return response
 
   /**
