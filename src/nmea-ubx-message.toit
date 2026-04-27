@@ -62,6 +62,10 @@ class Ubx00 extends NmeaMessage:
   is-poll -> bool:
     return payload_.size < 3
 
+  poll-reply-ids -> List?:
+    if not is-poll: return null
+    return [ID]
+
   /**
   Returns UTC timestamp of the message.
 
@@ -144,11 +148,15 @@ class Ubx03 extends NmeaMessage:
     super.private_ "P" ID payload
     satellites_ = satellite-ids
     if payload_.size < (num-svs * 6) + 3:
-      throw "not enough fields for this many sattelites"
+      throw "not enough fields for this many satellites"
 
   /** Whether this message is a poll message. */
   is-poll -> bool:
     return payload_.size < 3
+
+  poll-reply-ids -> List?:
+    if not is-poll: return null
+    return [ID]
 
   /** Number of satellites tracked. */
   num-svs -> int:
@@ -304,7 +312,7 @@ class Ubx04 extends NmeaMessage:
   This is the quantization error of the TIMEPULSE pin.
   */
   time-pulse-granularity -> int?:
-    return int.parse payload_[8] --if-error=: null
+    return int.parse payload_[9] --if-error=: null
 
   stringify -> string:
     if is-poll:
@@ -338,10 +346,6 @@ class Ubx40 extends NmeaMessage:
     FIELD-SPI_: "SPI"
   }
 
-  // Cannot be polled for?
-  constructor.poll:
-    super.private_  "P" ID ["PUBX","40"]
-
   constructor.set type/string
       --ddc-rate/int?=null
       --uart1-rate/int?=null
@@ -368,9 +372,9 @@ class Ubx40 extends NmeaMessage:
 
   stringify -> string:
     list := []
-    FIELD-LOOKUP_.keys.do:
-      if payload_[it] == 1: list += FIELD-LOOKUP_[it]
-    return  "$super: msgid:$type|$(list.join ",")"
+    FIELD-LOOKUP_.keys.do: | field |
+      if payload_[field] != "": list.add "$(FIELD-LOOKUP_[field]):$payload_[field]"
+    return  "$super: $type|$(list.join ",")"
 
 /**
 PUBX41: Set protocols and baud rates.

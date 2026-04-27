@@ -118,23 +118,21 @@ class NmeaParser:
       throw "$INVALID-NMEA-MESSAGE_: malformed header/body (second comma)"
 
     type/string := sentence[1..first-comma].to-ascii-upper
-    id/string := ?
 
-    // Looks for sentences $..XXXX,
-    id = type[2..]
+    // Looks for standard sentences $..XXXX, (e.g. GPGGA -> talker "GP", id "GGA").
+    id := type[2..]
     if registry_.contains id:
       return registry_[id].call type[0..2] (sentence[1..end].split DELIMITER_)
 
-    // Looks for Type 1 sentences $PXXXX, message ID goes to first comma:
+    // Looks for Type-1 proprietary sentences $PXXXX, (id goes to first comma).
     id = type[1..]
     if registry_.contains id:
       return registry_[id].call type[0..1] (sentence[1..end].split DELIMITER_)
 
-    // Looks for Type-2 sentences $PXXXX,XX, message ID goes to second comma:
-    type = sentence[1..second-comma].to-ascii-upper
-    id = type[0..]
+    // Looks for Type-2 proprietary sentences $PNAME,XX, (id goes to second comma, e.g. "PUBX,00").
+    id = sentence[1..second-comma].to-ascii-upper
     if registry_.contains id:
-      return registry_[id].call type[0..1] (sentence[1..end].split DELIMITER_)
+      return registry_[id].call "P" (sentence[1..end].split DELIMITER_)
 
     throw "$INVALID-NMEA-MESSAGE_: Unknown message type '$id'"
 
@@ -226,7 +224,7 @@ abstract class NmeaMessage:
   //  payload_ = ["$(talker)Q",ID]
 
   constructor.private_ .talker/string id/string .payload_/List:
-    id_ = id.replace "," ""
+    id_ = id
 
   /**
   Whether any cell of the message is empty (making the whole message incomplete).
@@ -280,11 +278,11 @@ abstract class NmeaMessage:
 
   /** See $super. */
   stringify -> string:
-    return "NMEA-$talker-$id_"
+    return "NMEA-$talker-$(id.replace "," "")"
 
   /** Full Message Name. */
   full-name -> string:
-    return "NMEA-$talker-$id_"
+    return "NMEA-$talker-$(id.replace "," "")"
 
   /** Provides access to raw data in all fields (parsed or not). */
   raw -> List:
@@ -307,7 +305,7 @@ abstract class NmeaMessage:
   */
   poll-reply-ids -> List?:
     if not is-poll: return null
-    return []
+    return [id]
 
 /**
 TXT: Text/status messages (firmware info, warnings, antenna status, etc).
@@ -644,7 +642,16 @@ class Rmc extends NmeaMessage:
     hour := int.parse (payload_[1])[0..2]
     minute := int.parse (payload_[1])[2..4]
     second := int.parse (payload_[1])[4..6]
-    ms := (payload_[1].index-of ".") > -1 ? (int.parse payload_[1][7..]) : 0
+    // Is fragile:  (try the code beneath first, remove on success.)
+    //ms := (payload_[1].index-of ".") > -1 ? (int.parse payload_[1][7..]) : 0
+    ms := 0
+    dot-pos := payload_[1].index-of "."
+    if dot-pos != -1:
+      frac := payload_[1][dot-pos + 1..]
+      if frac.size == 1: ms = (int.parse frac) * 100
+      else if frac.size == 2: ms = (int.parse frac) * 10
+      else: ms = int.parse frac[0..3]
+
     return Time.utc
       --year=year
       --month=month
@@ -694,7 +701,7 @@ class Gll extends NmeaMessage:
   static POSITION-MODE-AUTONOMOUS ::= "A"
   static POSITION-MODE-DATA-INVALID ::= "V"
   static POSITION-MODE-NO-FIX ::= "N"         // No fix.
-  static POSITION-MODE-DEAD-RECKONING ::= "E" // Eestimated/dead reckoning fix.
+  static POSITION-MODE-DEAD-RECKONING ::= "E" // Estimated/dead reckoning fix.
   static POSITION-MODE-DIFFERENTIAL ::= "D"   // Differential GNSS fix.
   static POSITION-MODE-RTK-FLOAT ::= "F"      // RTK float.
   static POSITION-MODE-RTK-FIXED ::= "R"      // RTK fixed.
@@ -716,16 +723,18 @@ class Gll extends NmeaMessage:
     super.private_ talker ID payload
     validate_
 
-  latitude -> float:
-    return float.parse payload_[1]
+  latitude -> float?:
+    return float.parse payload_[1] --if-error=: null
 
-  latitude-n -> string:
+  latitude-n -> string?:
+    if payload_[2] == "": return null
     return payload_[2]
 
-  longitude -> float:
-    return float.parse payload_[3]
+  longitude -> float?:
+    return float.parse payload_[3] --if-error=: null
 
-  longitude-e -> string:
+  longitude-e -> string?:
+    if payload_[4] == "": return null
     return payload_[4]
 
   /**
@@ -816,7 +825,7 @@ class Gsa extends NmeaMessage:
   system-id -> string?:
     if payload_.size >= 19:
       id := int.parse payload_[18] --if-error=: SYSTEM-ID-UNSPECIFIED
-      return SYSTEM-LOOKUP_[id]
+      return SYSTEM-LOOKUP_.get id --if-absent=: "UNKNOWN($id)"
     else:
       return NmeaParser.TALKER-LOOKUP_[talker]
       //return talker

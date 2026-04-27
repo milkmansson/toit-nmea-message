@@ -29,7 +29,7 @@ class Gnss-driver:
 
   // List of message IDs interesting to a given poll message. Mutex ensures
   // only poll message is processed at once.
-  pending-polls_/List? := null
+  pending-polls_ := []
 
   // Loggers - one for driver, and separate one for UBX device sourced messages.
   logger_/log.Logger := ?
@@ -88,14 +88,15 @@ class Gnss-driver:
             pending-polls_.remove message.id
             poll-latch_.set message
 
-          // Check if there is a lambda for this message type and if so, do it.
-          if message-type-lambdas_.contains message.id:
-            message-type-lambdas_[message.id].call message
           else:
-            // Print the message only if no lambda.
-            // This driver is for debugging/testing, but can be a bit noisy if
-            // testing a lambda for a message type.
-            logger_.debug "RECV  ->" --tags={"message": message}
+            // Check if there is a lambda for this message type and if so, do it.
+            if message-type-lambdas_.contains message.id:
+              message-type-lambdas_[message.id].call message
+            else:
+              // Print the message only if no lambda.
+              // This driver is for debugging/testing, but can be a bit noisy if
+              // testing a lambda for a message type.
+              logger_.debug "RECV  ->" --tags={"message": message}
 
           // Store latest version of messages for other handlers to use.
           latest-message[message.full-name] = message
@@ -127,7 +128,7 @@ class Gnss-driver:
 
   /** Send a user created message to the device, for debug purposes. */
   send-message message/NmeaMessage -> none:
-    logger_.debug "SEND  <-" --tags={"message": message.to-string}
+    logger_.debug "SEND  <-" --tags={"message": message}
     message-mutex_.do:
       adapter_.send-message message.to-string
 
@@ -160,11 +161,9 @@ class Gnss-driver:
       poll-latch_ = monitor.Latch
 
       // Catch if poll has no defined return types.
-      if not message.poll-reply-ids:
-        logger_.error "poll without poll-reply-ids" --tags={
-          "message":"$(message)",
-          "poll-reply-ids":message.poll-reply-ids,
-          }
+      if message.poll-reply-ids.size == 0:
+        logger_.error "poll without poll-reply-ids" --tags={"message":"$(message)"}
+        throw "poll without poll-reply-ids"
 
       // Set expected return types for the message runner.
       pending-polls_ = message.poll-reply-ids
@@ -178,9 +177,11 @@ class Gnss-driver:
             adapter_.send-message message.to-string
             response = poll-latch_.get
 
+      logger_.debug "POLL  ->" --tags={"message": response.full-name, "duration": duration}
+
       // Wipe latch & poll waiting list now we're not using it.
       poll-latch_ = null
-      pending-polls_ = null
+      pending-polls_ = []
 
       // Sleep a moment.
       sleep --ms=50
