@@ -23,9 +23,11 @@ For protocols the user does not want to parse but should be skipped cleanly
   use $add-skip to register a magic byte sequence as skip-only.
 
 The driver ships with built-in skip routines for NMEA, AIS, UBX, and CASIC
-  framings.  These are used automatically when a parser or skip is registered
-  for one of those known magic sequences.  For any other protocol the user can
+  framings.  These are used automatically for any of those magic sequences a
+  user does not register a parser for.  For any other protocol the user can
   supply a custom skip lambda via the `--skip` parameter on $add-parser.
+
+# Examples
 
 Example: registering an NMEA parser only.
 ```
@@ -52,13 +54,48 @@ driver := Gnss-driver reader writer
 driver.add-parser #[0x24] (:: | r | parser.from-reader r)
 ```
 
-Messages returned by the parse lambdas are expected to expose the following
-  duck-typed methods, used by the driver for poll/dispatch logic:
-  - `id -> string`           Identifier used for poll matching and lambda dispatch.
-  - `full-name -> string`    Used as the key in $latest-message.
-  - `is-multipart -> bool`   Multipart messages are not supported by $send-poll-message.
-  - `poll-reply-ids -> List?` Expected reply IDs when this message is a poll.
-  - `to-string -> string`    Wire representation, used by $send-message.
+# Message contract
+
+Messages returned by the parse lambdas must expose the following duck-typed
+  methods.  The driver does not enforce this at registration time; violations
+  will throw at dispatch time when the receiver task tries to access a missing
+  method.  Consider wrapping arbitrary user types in a small adapter class if
+  your parser does not produce objects with these methods natively.
+
+  - `id -> string`            Identifier used for poll matching and lambda
+                              dispatch.  Should be unique per message kind
+                              within a single protocol (e.g. "RMC", "GGA").
+  - `full-name -> string`     Used as the key in $latest-message.  Should be
+                              unique across all messages a single device might
+                              emit (e.g. "NMEA-GP-RMC", "NMEA-GN-GGA").
+  - `is-multipart -> bool`    True if this message is part of a multi-frame
+                              sequence.  Multipart messages are not currently
+                              supported by $send-poll-message.
+  - `poll-reply-ids -> List?` When this message is a poll, the IDs of messages
+                              the driver should accept as a reply (typically
+                              the message ID itself, plus any ACK/NAK IDs).
+                              May return null if not a poll.
+  - `to-string -> string`     Wire representation, used by $send-message.
+
+# Threading model
+
+The driver runs a single internal background task ("the receiver task") that
+  reads frames from the wire, dispatches them to user lambdas, and updates
+  $latest-message.  Two implications follow:
+
+  1. User lambdas registered via $register-message-lambda or
+     $register-default-lambda execute on the receiver task.  A long-running
+     lambda will block all message processing until it returns.  If you need
+     to do significant work in response to a message, dispatch it to a
+     separate task from inside your lambda and return immediately.
+
+  2. $latest-message is mutated by the receiver task and read by user code on
+     other tasks.  Toit's cooperative scheduling makes simple reads safe in
+     practice (the map is never partially updated mid-read because nothing
+     yields between the assignment and the next iteration of the receive
+     loop), but if you build a snapshot of multiple entries you should
+     either accept that the snapshot may straddle a message arrival, or
+     copy the map under your own synchronization.
 */
 class Gnss-driver:
   static POLL-TIMEOUT_ ::= Duration --s=5
@@ -69,9 +106,10 @@ class Gnss-driver:
   // Stores the latch if polling and waiting for an expected response.
   poll-latch_/monitor.Latch? := null
 
-  // List of message IDs interesting to a given poll message.  Mutex ensures
-  // only one poll message is processed at a time.
-  pending-polls_/List := []
+  // Set of message IDs we are waiting on as a reply to an outstanding poll.
+  // Mutex ensures only one poll is in flight at a time, but a poll may have
+  // multiple acceptable reply IDs (e.g. a message ID plus an ACK and a NAK).
+  pending-polls_/Set := {}
 
   // Logger for the driver.
   logger_/log.Logger
@@ -82,11 +120,27 @@ class Gnss-driver:
   // The adapter that owns the reader/writer and frame dispatch.
   adapter_/Adapter_
 
-  // Map to contain the most recent message of every given type.
+  /**
+  Most-recently-received message of every type the driver has seen.
+
+  Keyed by the message's `full-name` (e.g. "NMEA-GP-RMC").  Each value is the
+    last instance of that message type received from the device.
+
+  This map is mutated by the receiver task as messages arrive.  See the
+    threading model section in the class docstring for safe-access guidance.
+
+  Reading this map does not consume the message — repeated reads return the
+    same instance until a newer one of the same type arrives.
+  */
   latest-message/Map := {:}
 
   // Collection of Lambdas for handling messages.
   message-type-lambdas_/Map := {:}
+
+  // Optional catch-all lambda invoked for every received message that does
+  // not have a specific lambda registered against its id.  Set via
+  // $register-default-lambda.
+  default-lambda_/Lambda? := null
 
   /**
   Creates a new driver object.
@@ -166,15 +220,16 @@ class Gnss-driver:
         if pending-polls_.contains message.id and poll-latch_:
           pending-polls_.remove message.id
           poll-latch_.set message
+        else if message-type-lambdas_.contains message.id:
+          // A specific lambda is registered for this message id.
+          message-type-lambdas_[message.id].call message
+        else if default-lambda_:
+          // Fall through to the catch-all default lambda.
+          default-lambda_.call message
         else:
-          // Check if there is a lambda for this message type and if so, do it.
-          if message-type-lambdas_.contains message.id:
-            message-type-lambdas_[message.id].call message
-          else:
-            // Print the message only if no lambda.
-            // This driver is for debugging/testing, but can be a bit noisy if
-            // testing a lambda for a message type.
-            logger_.debug "RECV  ->" --tags={"message": message}
+          // No lambda anywhere — log at debug level so the user can see what's
+          // arriving but log volume is configurable.
+          logger_.debug "RECV  ->" --tags={"message": message}
 
         // Store latest version of messages for other handlers to use.
         latest-message[message.full-name] = message
@@ -190,36 +245,78 @@ class Gnss-driver:
       runner_.cancel
       runner_ = null
 
-  /** Sends a raw byte array to the device, for debug purposes. */
+  /**
+  Sends a raw $bytes byte array to the device.
+
+  No framing, no termination, no encoding — exactly the bytes given are
+    written to the wire.  Useful for sending pre-built binary protocol frames
+    (e.g. UBX commands).
+  */
   send-byte-array bytes/ByteArray -> none:
     logger_.debug "SEND  <-" --tags={"bytes": bytes}
     message-mutex_.do:
       adapter_.send-packet bytes
 
-  /** Sends a user created message to the device, for debug purposes. */
+  /**
+  Sends a $message object to the device.
+
+  $message must implement `to-string -> string`; the result is written to the
+    wire with a trailing CRLF (suitable for line-framed protocols such as
+    NMEA).  For binary protocols use $send-byte-array instead.
+
+  This is fire-and-forget.  Use $send-poll-message if you need to wait for
+    a reply.
+  */
   send-message message/any -> none:
     logger_.debug "SEND  <-" --tags={"message": message}
     message-mutex_.do:
       adapter_.send-message message.to-string
 
-  /** Sends a user created string to the device, for debug purposes. */
+  /**
+  Sends $message to the device verbatim, with a trailing CRLF.
+
+  Convenience for emitting a literal NMEA-style sentence built outside the
+    parser library (e.g. a manually-constructed test sentence).
+  */
   send-sentence message/string -> none:
     logger_.debug "SEND  <-" --tags={"message": message}
     message-mutex_.do:
       adapter_.send-packet message.to-byte-array
 
   /**
-  Sends a poll message.
+  Sends a poll $message and waits for the device's reply.
 
-  Handles logic of success and failure messages, waits for the required message
-    while not blocking other message traffic being handled by the driver.  Note
-    that new/custom message types being sent may require latch handling to avoid
-    always being handled via the $POLL-TIMEOUT_ timeout path, and to catch the
-    relevant message that matches the command.
+  The driver writes $message to the wire, then waits up to $POLL-TIMEOUT_
+    seconds for any incoming message whose `id` is in $message's
+    `poll-reply-ids` list.  The matching reply message is returned.
 
-  A poll for a message has it returned before supplying to any registered
-    lambdas for that type.  To poll for a message and just have the respective
-    lambda handle it - use $send-message instead.
+  Returns null if the timeout expires before a matching reply arrives.
+
+  The reply message is delivered to the caller of this method only — it is
+    NOT also dispatched to any lambda registered for that id via
+    $register-message-lambda.  If you want the reply to be handled by a
+    registered lambda, use $send-message instead.
+
+  # Concurrency
+
+  At most one poll may be in flight at a time.  If $send-poll-message is
+    called while another poll is outstanding, the second call blocks on the
+    internal mutex until the first completes (success, timeout, or error).
+
+  After a successful poll, the driver sleeps briefly (50ms) before releasing
+    the mutex.  This is a settling delay for receivers that drop messages
+    when polled too rapidly.
+
+  # Limitations
+
+  Multipart messages are not currently supported as poll requests; calling
+    this method with a multipart $message throws.  If you need to assemble
+    multipart replies, register a regular lambda via $register-message-lambda
+    and accumulate the parts yourself.
+
+  $message's `poll-reply-ids` must be a non-empty list, otherwise this method
+    throws.  A poll with no expected reply id has no way to recognise its own
+    response.
   */
   send-poll-message message/any -> any:
     response := message
@@ -237,7 +334,8 @@ class Gnss-driver:
         throw "poll without poll-reply-ids"
 
       // Set expected return types for the message runner.
-      pending-polls_ = message.poll-reply-ids
+      pending-polls_ = {}
+      message.poll-reply-ids.do: pending-polls_.add it
 
       // Send and wait for the latch.
       duration := Duration.ZERO
@@ -252,9 +350,11 @@ class Gnss-driver:
 
       // Wipe latch & poll waiting list now we're not using it.
       poll-latch_ = null
-      pending-polls_ = []
+      pending-polls_ = {}
 
-      // Sleep a moment.
+      // Brief settling delay before the mutex is released.  Some GNSS receivers
+      // drop messages if polled back-to-back too rapidly; this gives the device
+      // a moment to recover its output cadence before another poll can begin.
       sleep --ms=50
 
       // Bail on an exception.
@@ -266,10 +366,18 @@ class Gnss-driver:
     return response
 
   /**
-  Registers a Lambda against a message type.
+  Registers a $function to be called when a message with $message-id arrives.
 
-  If a lambda is registered for a message type, the lambda $function will be
-    called with the message each time the matching message type is received.
+  Each time the receiver task parses a message whose `id` equals $message-id,
+    $function is called with that message as its argument.  Only one function
+    can be registered per message id; calling this method again with the same
+    $message-id replaces the previous function.
+
+  Pass null as $function to deregister.
+
+  $function executes on the receiver task; see the threading model section in
+    the class docstring.  Keep the body short, or dispatch heavy work to a
+    separate task.
   */
   register-message-lambda message-id/string function/Lambda? -> none:
     if not function:
@@ -277,6 +385,26 @@ class Gnss-driver:
         message-type-lambdas_.remove message-id
       return
     message-type-lambdas_[message-id] = function
+
+  /**
+  Registers a catch-all $function called for every message that has no
+    specific lambda registered against its id.
+
+  Useful for logging, telemetry, or building generic message routers without
+    having to enumerate every message type the device might emit.  When set,
+    the default lambda replaces the driver's built-in debug log fallback —
+    that is, the driver will no longer log unhandled messages at debug level
+    while a default lambda is registered.
+
+  Pass null as $function to deregister.  Only one default lambda may be
+    registered at a time; calling this method again with a non-null
+    $function replaces the previous one.
+
+  $function executes on the receiver task; see the threading model section
+    in the class docstring.
+  */
+  register-default-lambda function/Lambda? -> none:
+    default-lambda_ = function
 
 
 /**
@@ -359,11 +487,6 @@ class Adapter_:
     m := 0
     handlers_.keys.do: | k/ByteArray | if k.size > m: m = k.size
     max-magic-len_ = m
-
-  reset --mode/int=1 -> none:
-    wait-until-receiver-available_ --timeout=(Duration --s=3)
-    sleep --ms=50
-    flush
 
   /** Sends bytes, as is. */
   send-packet bytes/ByteArray -> none:
