@@ -1,6 +1,7 @@
 sdk: ^2.0.0-alpha.188
 prefixes:
   ema: toit-ema
+  gnss-driver: toit-gnss-driver
   nmea-message: ..
 packages:
   ..:
@@ -10,3 +11,5 @@ packages:
     name: ema
     version: 1.2.0
     hash: 3acf28cde4c2b99c36424d23663d58d1479dc316
+  toit-gnss-driver:
+    path: ../../toit-gnss-driver
