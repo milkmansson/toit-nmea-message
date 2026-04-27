@@ -30,5 +30,7 @@ main:
   // Open serial communication and start driver.
   print "Opening on $BAUD"
   port := uart.Port --tx=TX-PIN --rx=RX-PIN --baud-rate=BAUD
-  driver := Gnss-driver port.in port.out nmea-parser
+  driver := Gnss-driver port.in port.out
+  driver.add-parser #[0x24] (:: | r | nmea-parser.from-reader r)
+
   print "Driver started..."
