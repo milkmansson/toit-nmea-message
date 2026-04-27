@@ -31,7 +31,7 @@ Example: registering an NMEA parser only.
 ```
 parser := NmeaParser
 driver := Gnss-driver reader writer
-driver.add-parser #[0x24]: | r | parser.from-reader r
+driver.add-parser #[0x24] (:: | r | parser.from-reader r)
 ```
 
 Example: registering NMEA and UBX parsers together.
@@ -39,17 +39,17 @@ Example: registering NMEA and UBX parsers together.
 nmea-parser := NmeaParser
 ubx-parser := UbxParser
 driver := Gnss-driver reader writer
-driver.add-parser #[0x24]:       | r | nmea-parser.from-reader r
-driver.add-parser #[0xb5, 0x62]: | r | ubx-parser.from-reader r
+driver.add-parser #[0x24]       (:: | r | nmea-parser.from-reader r)
+driver.add-parser #[0xb5, 0x62] (:: | r | ubx-parser.from-reader r)
 ```
 
-Example: registering NMEA and asking the driver to cleanly skip UBX frames
-  without parsing them.
+Example: registering NMEA only.  Frames from any other protocol the driver
+  knows how to frame (UBX, CASIC, AIS) are skipped cleanly by default —
+  no extra registration required.
 ```
 parser := NmeaParser
 driver := Gnss-driver reader writer
-driver.add-parser #[0x24]: | r | parser.from-reader r
-driver.add-skip #[0xb5, 0x62]
+driver.add-parser #[0x24] (:: | r | parser.from-reader r)
 ```
 
 Messages returned by the parse lambdas are expected to expose the following
@@ -95,8 +95,8 @@ class Gnss-driver:
     create an $io.Writer from a $serial.Device, and provide as $writer.
 
   After construction, register one or more parsers via $add-parser before
-    expecting any messages.  If no parsers are registered, $next-message will
-    block waiting for a parseable frame indefinitely.
+    expecting any messages.  If no parsers are registered, the receive loop
+    will spin discarding bytes until something is registered.
   */
   constructor
       reader/io.Reader
@@ -160,7 +160,7 @@ class Gnss-driver:
       start-latch.set true
       while true:
         message := adapter_.next-message
-        if message == null: continue.while  // Skipped frame; keep reading.
+        if message == null: continue  // Skipped frame; keep reading.
 
         // Resolve any pending poll waiting for this message type.
         if pending-polls_.contains message.id and poll-latch_:
@@ -315,6 +315,15 @@ class Adapter_:
 
   constructor .reader_ .writer_ logger/log.Logger=log.default:
     logger_ = logger.with-name "adapter"
+    // Auto-register skip-only handlers for every protocol the driver knows how
+    // to frame.  This means a user who only registers a parser for one
+    // protocol (e.g. NMEA) still gets clean frame skipping for any other known
+    // protocol the device might emit (e.g. UBX, CASIC).  When the user later
+    // calls add-parser_ for one of these magics, the parser registration
+    // overwrites the skip-only entry.
+    BUILT-IN-SKIPS_.do: | magic/ByteArray skip-fn/Lambda |
+      handlers_[magic] = {"parse": null, "skip": skip-fn}
+    recompute-max-magic_
 
   /** Registers a parse handler.  See $Gnss-driver.add-parser. */
   add-parser_ magic/ByteArray lambda/Lambda --skip/Lambda?=null -> none:
@@ -383,7 +392,7 @@ class Adapter_:
         // Nothing registered — caller probably forgot add-parser.  Avoid a
         // tight spin: read one byte and discard.
         reader_.skip 1
-        continue.while
+        continue
 
       peek ::= reader_.peek-bytes max-magic-len_
 
@@ -418,7 +427,7 @@ class Adapter_:
             logger_.warn "skip routine failed; advancing one byte"
                 --tags={"error": se, "magic": best-magic}
             reader_.skip 1
-        continue.while
+        continue
 
       // No magic matched.  Advance one byte.
       reader_.skip 1

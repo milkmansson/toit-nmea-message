@@ -593,11 +593,15 @@ class Rmc extends NmeaMessage:
     POS-MODE-MANUAL: "Manual"
   }
 
+  /** Wall-clock instant when this message was parsed.  Used by $system-time-offset. */
+  received-time/Time? := null
+
   /** Creates a standard poll for RMC from the specified talker id. */
   constructor.poll --talker=NmeaParser.GPS:
     super.private_ talker "Q" ["$(talker)Q",ID]
 
   constructor.private_ talker/string payload/List:
+    received-time = Time.now
     super.private_ talker ID payload
     validate_
 
@@ -662,6 +666,29 @@ class Rmc extends NmeaMessage:
       --m=minute
       --s=second
       --ms=ms
+
+  /**
+  Computes the offset between the system clock and GPS time at the moment
+    this message arrived.
+
+  Returns a $Duration suitable for passing to system clock setters such as
+    `set-real-time-clock`:
+    - Positive means the system clock is behind GPS time.
+    - Negative means the system clock is ahead of GPS time.
+
+  Returns null if the fix status is not valid, or if the GPS time fields
+    cannot be parsed.
+
+  Unlike $Zda.system-time-offset, this method does NOT wrap the offset to
+    +/- 0.5 seconds.  The raw delta is returned, which is correct for initial
+    RTC sync from cold (when the system clock may be wildly off).
+  */
+  system-time-offset -> Duration?:
+    if status != STATUS-DATA-VALID: return null
+    if not received-time: return null
+    gps-time := time
+    if not gps-time: return null
+    return received-time.to gps-time
 
   stringify -> string:
     output := ["$super: status:$(STATUS-LOOKUP_[status])"]
