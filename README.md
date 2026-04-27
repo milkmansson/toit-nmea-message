@@ -5,7 +5,7 @@ designed to be extensible, in order to add proprietary NMEA message types.
 Several libraries of proprietary NMEA message types are supplied in the package,
 as well as opportunities for user-supplied message types.
 
-> [!INFORMATION]
+> [!NOTE]
 > This parser is designed for use with the generic
 > [GNSS driver](https://github.com/milkmansson/toit-gnss-driver).  Please see
 > this project for implementation examples.
