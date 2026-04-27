@@ -84,6 +84,8 @@ class NmeaParser:
     Gst.ID: :: | talker payload | Gst.private_ talker payload,
     Vlw.ID: :: | talker payload | Vlw.private_ talker payload,
     Rlm.ID: :: | talker payload | Rlm.private_ talker payload,
+    Dtm.ID: :: | talker payload | Dtm.private_ talker payload,
+    Grs.ID: :: | talker payload | Grs.private_ talker payload,
   }
 
   constructor --proprietary-messages/Map?=null:
@@ -556,10 +558,12 @@ class Vtg extends NmeaMessage:
 
   stringify -> string:
     if not positioning-mode:
-      return  "$super: mode:NOT PROVIDED"
+      return "$super: mode:NOT PROVIDED"
     if positioning-mode == POS-MODE-INVALID-DATA or positioning-mode == POS-MODE-MANUAL:
-      return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]"
-    return  "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]|kmh:$(%0.0f speed-kmh)|kts:$(%0.0f speed-kts)|course:$(%0.3f true-course)"
+      return "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]"
+    if speed-kmh == null or speed-kts == null or true-course == null:
+      return "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]|no data"
+    return "$super: mode:$POS-MODE-LOOKUP_[positioning-mode]|kmh:$(%0.0f speed-kmh)|kts:$(%0.0f speed-kts)|course:$(%0.3f true-course)"
 
 /**
 RMC: Time, date, time (UTC string timestamp), lat/lon, speed over ground, course over ground, status.
@@ -635,15 +639,14 @@ class Rmc extends NmeaMessage:
       return payload_[12]
     return null
 
-  time -> Time:
-    year := payload_[9] != "" ? (int.parse (payload_[9])[4..6]) : 0
-    month := payload_[9] != "" ? (int.parse (payload_[9])[2..4]) : 0
-    day := payload_[9] != "" ? (int.parse (payload_[9])[0..2]) : 0
-    hour := int.parse (payload_[1])[0..2]
+  time -> Time?:
+    if payload_[1] == "" or payload_[9] == "": return null
+    year  := int.parse (payload_[9])[4..6]
+    month := int.parse (payload_[9])[2..4]
+    day   := int.parse (payload_[9])[0..2]
+    hour   := int.parse (payload_[1])[0..2]
     minute := int.parse (payload_[1])[2..4]
     second := int.parse (payload_[1])[4..6]
-    // Is fragile:  (try the code beneath first, remove on success.)
-    //ms := (payload_[1].index-of ".") > -1 ? (int.parse payload_[1][7..]) : 0
     ms := 0
     dot-pos := payload_[1].index-of "."
     if dot-pos != -1:
@@ -651,9 +654,8 @@ class Rmc extends NmeaMessage:
       if frac.size == 1: ms = (int.parse frac) * 100
       else if frac.size == 2: ms = (int.parse frac) * 10
       else: ms = int.parse frac[0..3]
-
     return Time.utc
-      --year=year
+      --year=2000 + year
       --month=month
       --day=day
       --h=hour
@@ -665,7 +667,8 @@ class Rmc extends NmeaMessage:
     output := ["$super: status:$(STATUS-LOOKUP_[status])"]
     if status == "V": return output[0]
     if positioning-mode != null: output.add "mode:$(POS-MODE-LOOKUP_[positioning-mode])"
-    output.add "time:$time"
+    t := time
+    output.add (t != null ? "time:$t" : "time:unavailable")
     return output.join "|"
 
 /**
@@ -917,21 +920,22 @@ class Gsv extends NmeaMessage:
     out-map := {:}
     num-svs.repeat:
       num := 4 + (it * 4)
-      prn := int.parse payload_[num]
+      prn := int.parse payload_[num] --if-error=: null
+      if prn == null: continue.repeat
       elev := float.parse payload_[num + 1] --if-error=(: null)
-      az := float.parse payload_[num + 2] --if-error=(: null)
-      snr := float.parse payload_[num + 3] --if-error=(: null)
+      az   := float.parse payload_[num + 2] --if-error=(: null)
+      snr  := float.parse payload_[num + 3] --if-error=(: null)
       out-map[prn] = [elev, az, snr]
     return out-map
 
   stringify -> string:
+    if total-svs == 0:
+      return "$super: $NmeaParser.TALKER-LOOKUP_[talker]:[0/0] ()"
     sv-set := svs.keys.join ","
     n := message-part[0]
-    x := message-part[1]
     start := (n - 1) * 4 + 1
     end := n * 4
     if end > total-svs: end = total-svs
-    //return  "$super: $NmeaParser.TALKER-LOOKUP_[talker]:$message-part/$total-svs ($sv-set)"
     return "$super: $NmeaParser.TALKER-LOOKUP_[talker]:[$start-$end/$total-svs] ($sv-set)"
 
 /**
@@ -1346,3 +1350,156 @@ class Rlm extends NmeaMessage:
     list.add "code:$(code)"
     list.add "body:$(%02x body)"
     return  "$super: $(list.join "|")"
+
+/**
+DTM: Datum Reference.
+
+Reports the local geodetic datum and offsets from the reference datum (WGS84
+  in most cases).  Most GNSS receivers emit this automatically at the start of
+  each fix cycle.  The fields are typically zero-filled when WGS84 is in use,
+  which is the common case.
+*/
+class Dtm extends NmeaMessage:
+  static ID ::= "DTM"
+
+  /** Creates a standard poll for DTM from the specified talker id. */
+  constructor.poll --talker=NmeaParser.GPS:
+    super.private_ talker "Q" ["$(talker)Q",ID]
+
+  constructor.private_ talker/string payload/List:
+    super.private_ talker ID payload
+    validate_
+
+  /**
+  Local datum code.
+
+  "W84" = WGS84, "W72" = WGS72, "S85" = SGS85, "P90" = PE90.
+    "999" indicates a user-defined datum.  Other values are defined by the
+    NMEA standard.
+  */
+  local-datum -> string?:
+    if payload_[1] == "": return null
+    return payload_[1]
+
+  /**
+  Local datum subdivision code.
+
+  Sub-code for user-defined datums ($local-datum == "999"), otherwise empty.
+  */
+  local-datum-sub -> string?:
+    if payload_[2] == "": return null
+    return payload_[2]
+
+  /** Latitude offset from reference datum, in minutes. */
+  lat-offset -> float?:
+    return float.parse payload_[3] --if-error=: null
+
+  /** Latitude offset hemisphere, N or S. */
+  lat-offset-n -> string?:
+    if payload_[4] == "": return null
+    return payload_[4]
+
+  /** Longitude offset from reference datum, in minutes. */
+  lon-offset -> float?:
+    return float.parse payload_[5] --if-error=: null
+
+  /** Longitude offset hemisphere, E or W. */
+  lon-offset-e -> string?:
+    if payload_[6] == "": return null
+    return payload_[6]
+
+  /** Altitude offset from reference datum, in meters. */
+  alt-offset -> float?:
+    return float.parse payload_[7] --if-error=: null
+
+  /**
+  Reference datum code.
+
+  The datum that the offsets are relative to.  Typically "W84" (WGS84).
+  */
+  reference-datum -> string?:
+    if payload_[8] == "": return null
+    return payload_[8]
+
+  stringify -> string:
+    output := []
+    if local-datum: output.add "datum:$(local-datum)"
+    if reference-datum: output.add "ref:$(reference-datum)"
+    if lat-offset: output.add "lat-offset:$(lat-offset)$(lat-offset-n)"
+    if lon-offset: output.add "lon-offset:$(lon-offset)$(lon-offset-e)"
+    if alt-offset: output.add "alt-offset:$(alt-offset)m"
+    return "$super: $(output.join "|")"
+
+/**
+GRS: GNSS Range Residuals.
+
+Reports the range residuals used in, or recomputed after, the position solution.
+  Used to support Receiver Autonomous Integrity Monitoring (RAIM).  An integrity
+  process using these residuals would also require GGA or GNS, GSA, and GSV
+  sentences.
+
+When multiple constellations contribute to the fix, multiple GRS sentences are
+  produced (one per constellation) each with talker ID GN.  The $system-id field
+  identifies the specific constellation for each sentence.
+*/
+class Grs extends NmeaMessage:
+  static ID ::= "GRS"
+
+  constructor.private_ talker/string payload/List:
+    super.private_ talker ID payload
+    validate_
+
+  /**
+  UTC timestamp of the associated GGA or GNS fix.
+
+  Provided as a reference to the fix this sentence belongs to.  Does not
+    contain date information; use RMC or ZDA for full time objects.
+  */
+  timestamp -> string?:
+    if payload_[1] == "": return null
+    return payload_[1]
+
+  /**
+  Residual calculation mode.
+
+  0 = residuals were used to calculate the position in the associated GGA/GNS
+    sentence.
+  1 = residuals were recomputed after the GGA/GNS position was calculated,
+    and so reflect the quality of that solution more accurately.
+  */
+  mode -> int?:
+    return int.parse payload_[2] --if-error=: null
+
+  /**
+  Range residuals in meters for each satellite used in the navigation solution.
+
+  Up to 12 residuals are present, one per satellite, in the same order as the
+    satellites reported in the associated GSA sentence.  Empty fields indicate
+    unused slots and are omitted from the returned list.
+  */
+  residuals -> List:
+    result := []
+    13.repeat: | i |
+      field := payload_.size > (3 + i) ? payload_[3 + i] : ""
+      val := float.parse field --if-error=: null
+      if val != null: result.add val
+    return result
+
+  /**
+  GNSS System ID. (NMEA 4.10 or later.)
+
+  Identifies the satellite system this sentence pertains to when multiple GRS
+    sentences are produced for a combined fix (talker ID GN).  Null if not
+    present (pre-4.10 firmware).
+  */
+  system-id -> int?:
+    if payload_.size >= 16:
+      return int.parse payload_[15] --if-error=: null
+    return null
+
+  stringify -> string:
+    res := residuals
+    res-string := res.size > 0 ? (res.map: | r | "$(%.1f r)").join "," : "NONE"
+    if system-id != null:
+      return "$super: mode:$mode|system:$system-id|residuals:[$res-string]"
+    return "$super: mode:$mode|residuals:[$res-string]"

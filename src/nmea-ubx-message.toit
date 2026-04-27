@@ -57,6 +57,7 @@ class Ubx00 extends NmeaMessage:
   /** Not expected - leaving here until test of this function. */
   constructor.private_ payload/List:
     super.private_ "P" ID payload
+    validate_
 
   /** Whether this message is a poll message. */
   is-poll -> bool:
