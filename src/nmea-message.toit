@@ -6,7 +6,6 @@ import io
 import io show LITTLE-ENDIAN
 
 class NmeaParser:
-  static UBX-MAGIC-BYTE_ ::= 0xb5
   static NMEA-MAGIC-BYTE_ ::= 0x24
   static AIS-MAGIC-BYTE_ ::= 0x21
 
@@ -67,6 +66,9 @@ class NmeaParser:
   static UTC ::= "UTC" // Receiver status, simplified information for leap second correction.
   static INS ::= "INS" // Inertial Navigation System (INS) information.
   */
+
+  magic -> ByteArray:
+    return #[NMEA-MAGIC-BYTE_]
 
   // Type Registry:
   registry_/Map := {

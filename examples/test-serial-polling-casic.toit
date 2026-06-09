@@ -5,7 +5,7 @@
 import gpio
 import uart
 
-import .driver show *
+import gnss-driver show *
 import nmea-message show *
 import nmea-message.nmea-casic-message show *
 
@@ -40,7 +40,8 @@ main:
   print "Opening on $BAUD..."
   port := uart.Port --tx=TX-PIN --rx=RX-PIN --baud-rate=BAUD
   print "Starting driver..."
-  driver := Driver port.in port.out nmea-parser
+  driver := Gnss-driver port.in port.out
+  driver.add-parser nmea-parser
   print "Driver started..."
 
   print "Sending factory reset..."
